@@ -14,7 +14,7 @@ export type BallDesign = 'molten' | 'beachPro';
 type RGB = [number, number, number];
 const hex = (h: string): RGB => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
 
-const MOLTEN = { white: hex('#F6F5F1'), green: hex('#0A8A47'), red: hex('#D81F2A'), seam: hex('#C9C9C2') };
+const MOLTEN = { white: hex('#F6F5F1'), green: hex('#00753A'), red: hex('#C0121D'), seam: hex('#C9C9C2') };
 const BEACH = { yellow: hex('#FFD31C'), blue: hex('#1E3FA8'), white: hex('#F8F8F5'), purple: hex('#7B3FB2'), red: hex('#E8383F'), orange: hex('#F7942A') };
 
 /** Cube-face projection: local coords in [-1, 1], used for even micro-textures. */
@@ -24,16 +24,6 @@ function cubeFace(x: number, y: number, z: number) {
   const i = ax >= ay && ax >= az ? 0 : ay >= az ? 1 : 2;
   const m = Math.max(ax, ay, az);
   return { along: c[(i + 1) % 3] / m, across: c[(i + 2) % 3] / m };
-}
-
-/** Honeycomb: distance to the hex cell edge (0 on the edge, ~1 in the center). */
-function honeycomb(u: number, v: number, size: number) {
-  const q = u / size, r = v / (size * 0.866);
-  const row = Math.floor(r);
-  const qq = q + (row % 2 ? 0.5 : 0);
-  const dx = Math.abs(qq - Math.floor(qq) - 0.5), dy = Math.abs(r - row - 0.5) * 0.866;
-  const d = Math.max(dx * 0.866 + dy * 0.5, dy);
-  return Math.min(1, Math.max(0, (0.5 - d) * 7));
 }
 
 function dimples(u: number, v: number, size: number) {
@@ -51,19 +41,18 @@ const smooth = (e0: number, e1: number, x: number) => {
 /** Indoor ball: S-curved bands cycling white → red → green, printed honeycomb, thin seams. */
 function moltenPixel(lat: number, lon: number, x: number, y: number, z: number): { c: RGB; b: number } {
   const W = 0.56;
-  const f = lat + 0.62 * Math.sin(lon) + 0.14 * Math.sin(2 * lon);
+  const f = lat - 0.55 * Math.sin(lon) + 0.16 * Math.sin(3 * lon) + 0.06 * Math.sin(2 * lon);
   const n = Math.round(f / W);
   const fr = f / W - n; // −0.5 … 0.5 inside a band
   const cyc: RGB[] = [MOLTEN.white, MOLTEN.red, MOLTEN.green];
   let c = cyc[((n % 3) + 3) % 3];
   const fc = cubeFace(x, y, z);
-  const hc = honeycomb(fc.along + 2, fc.across + 2, 0.085);
-  // printed honeycomb is darker on the coloured panels, barely visible on white
-  const isWhite = c === MOLTEN.white;
-  c = shade(c, isWhite ? 0.97 + hc * 0.03 : 0.86 + hc * 0.14);
+  // V5M4000: smooth synthetic leather with a fine pebble grain
+  const hc = dimples(fc.along + 2, fc.across + 2, 0.03);
+  c = shade(c, 0.97 + hc * 0.03);
   const seam = 0.5 - Math.abs(fr) < 0.018;
   if (seam) return { c: MOLTEN.seam, b: 60 };
-  return { c, b: 170 + hc * 70 };
+  return { c, b: 200 + hc * 35 };
 }
 
 /** Beach ball: blue · white · yellow · white · blue bands; blue fades through purple to red with halftone dots. */
@@ -106,6 +95,86 @@ function drawText(ctx: CanvasRenderingContext2D, W: number, H: number, o: { text
     ctx.fillStyle = o.color;
     ctx.fillText(o.text, 0, 0);
   }
+  ctx.restore();
+}
+
+/** "molten" wordmark with the round, flame-cut "o". */
+function drawMoltenLogo(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: number) {
+  ctx.save();
+  ctx.font = `900 ${size}px "Arial Black", "Helvetica Neue", Arial, sans-serif`;
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = '#111111';
+  const m = ctx.measureText('m').width * 0.98;
+  const lten = ctx.measureText('lten').width;
+  const oW = size * 0.66;
+  const gap = size * 0.03;
+  const total = m + gap + oW + gap + lten;
+  let x = cx - total / 2;
+  const base = cy + size * 0.36;
+  ctx.fillText('m', x, base);
+  x += m + gap;
+  // "o": thick ring with a teardrop flame inside
+  const ocx = x + oW / 2, ocy = base - size * 0.36;
+  const R = oW / 2;
+  ctx.beginPath();
+  ctx.arc(ocx, ocy, R, 0, Math.PI * 2);
+  ctx.arc(ocx, ocy, R * 0.52, 0, Math.PI * 2, true);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(ocx + R * 0.05, ocy - R * 0.5);
+  ctx.bezierCurveTo(ocx + R * 0.45, ocy - R * 0.05, ocx + R * 0.25, ocy + R * 0.45, ocx - R * 0.05, ocy + R * 0.42);
+  ctx.bezierCurveTo(ocx - R * 0.35, ocy + R * 0.35, ocx - R * 0.3, ocy - R * 0.05, ocx + R * 0.05, ocy - R * 0.5);
+  ctx.fill();
+  x += oW + gap;
+  ctx.fillText('lten', x, base);
+  // ® mark
+  ctx.font = `700 ${size * 0.16}px Arial, sans-serif`;
+  ctx.fillText('®', x + lten + size * 0.02, base - size * 0.62);
+  ctx.restore();
+}
+
+/** Outlined "4000" with the size badge below, as printed on the red panel. */
+function drawModelNumber(ctx: CanvasRenderingContext2D, cx: number, cy: number) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(1.55, 1);
+  ctx.font = `700 46px "Arial", sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  if ('letterSpacing' in ctx) (ctx as unknown as { letterSpacing: string }).letterSpacing = '10px';
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = 'rgba(255,240,240,0.85)';
+  ctx.strokeText('4000', 0, 0);
+  ctx.restore();
+  // size badge "5"
+  ctx.save();
+  ctx.fillStyle = 'rgba(255,245,245,0.9)';
+  ctx.beginPath();
+  ctx.arc(cx, cy + 46, 15, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#C81E28';
+  ctx.font = '700 20px Arial, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('5', cx, cy + 47);
+  ctx.font = '600 9px Arial, sans-serif';
+  ctx.fillStyle = 'rgba(255,240,240,0.8)';
+  ctx.fillText('Size', cx, cy + 70);
+  ctx.restore();
+}
+
+/** "OFFICIAL / SIZE AND WEIGHT" on the green panel. */
+function drawOfficial(ctx: CanvasRenderingContext2D, cx: number, cy: number) {
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(10,40,20,0.85)';
+  if ('letterSpacing' in ctx) (ctx as unknown as { letterSpacing: string }).letterSpacing = '9px';
+  ctx.font = '500 30px Arial, sans-serif';
+  ctx.fillText('OFFICIAL', cx, cy);
+  if ('letterSpacing' in ctx) (ctx as unknown as { letterSpacing: string }).letterSpacing = '3px';
+  ctx.font = '600 12px Arial, sans-serif';
+  ctx.fillText('SIZE AND WEIGHT', cx, cy + 26);
   ctx.restore();
 }
 
@@ -152,9 +221,9 @@ function makeTextures(design: BallDesign) {
   bx.putImageData(bi, 0, 0);
   // printed marks, placed like on the real balls
   if (design === 'molten') {
-    drawText(cx, W, H, { text: '5000', color: '', stroke: 'rgba(255,255,255,0.55)', y: -H * 0.115, size: 56, spacing: 8, scaleX: 1.3 });
-    drawText(cx, W, H, { text: 'molten', color: '#111111', y: 0, size: 118, spacing: -4, scaleX: 1.05 });
-    drawText(cx, W, H, { text: 'FLISTATEC', color: 'rgba(255,255,255,0.75)', y: H * 0.15, size: 30, slant: 0.15, spacing: 4 });
+    drawModelNumber(cx, W / 2, H / 2 - H * 0.19);
+    drawMoltenLogo(cx, W / 2, H / 2, 112);
+    drawOfficial(cx, W / 2, H / 2 + H * 0.17);
   } else {
     drawText(cx, W, H, { text: 'BEACH PRO', color: '#111111', y: -H * 0.155, size: 84, slant: 0.12, scaleX: 1.05 });
     drawText(cx, W, H, { text: 'MIKASA', color: '#1B2A8C', y: H * 0.005, size: 112, slant: 0.04, spacing: 0, scaleX: 1.12 });
@@ -196,7 +265,7 @@ function Ball({ design, spin }: { design: BallDesign; spin: boolean }) {
     <mesh ref={ref} rotation={[0.22, -Math.PI / 2 - 0.3, 0.12]}>
       <sphereGeometry args={[1, 128, 96]} />
       <meshPhysicalMaterial map={tex.map} bumpMap={tex.bumpMap} bumpScale={design === 'molten' ? 1.2 : 1.0}
-        roughness={design === 'molten' ? 0.62 : 0.5} clearcoat={0.1} clearcoatRoughness={0.6} envMapIntensity={0.3} />
+        roughness={design === 'molten' ? 0.62 : 0.5} clearcoat={0.1} clearcoatRoughness={0.6} envMapIntensity={0.22} />
     </mesh>
   );
 }
