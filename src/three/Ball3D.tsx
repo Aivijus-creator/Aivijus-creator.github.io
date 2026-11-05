@@ -14,82 +14,92 @@ export type BallDesign = 'molten' | 'beachPro';
 type RGB = [number, number, number];
 const hex = (h: string): RGB => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
 
-const MOLTEN = { white: hex('#F4F3EE'), green: hex('#0B8F4D'), red: hex('#D3202C'), seam: hex('#9A9A94') };
-const BEACH = { yellow: hex('#FFCF1A'), blue: hex('#1B4FAE'), white: hex('#F7F7F2'), red: hex('#D8262F'), seam: hex('#2A2A2A') };
+const MOLTEN = { white: hex('#F6F5F1'), green: hex('#0A8A47'), red: hex('#D81F2A'), seam: hex('#C9C9C2') };
+const BEACH = { yellow: hex('#FFD31C'), blue: hex('#1E3FA8'), white: hex('#F8F8F5'), purple: hex('#7B3FB2'), red: hex('#E8383F'), orange: hex('#F7942A') };
 
-/** Cube-face projection: returns face axis, sign and local coords in [-1, 1]. */
+/** Cube-face projection: local coords in [-1, 1], used for even micro-textures. */
 function cubeFace(x: number, y: number, z: number) {
   const ax = Math.abs(x), ay = Math.abs(y), az = Math.abs(z);
   const c = [x, y, z];
   const i = ax >= ay && ax >= az ? 0 : ay >= az ? 1 : 2;
   const m = Math.max(ax, ay, az);
-  // strips run along axis (i+1)%3 and are divided along (i+2)%3 → neighbouring faces are perpendicular
-  const along = c[(i + 1) % 3] / m;
-  const across = c[(i + 2) % 3] / m;
-  return { i, s: Math.sign(c[i]), along, across };
+  return { along: c[(i + 1) % 3] / m, across: c[(i + 2) % 3] / m };
 }
 
-/** Raised honeycomb: 0 at cell edges, 1 in cell centers. */
+/** Honeycomb: distance to the hex cell edge (0 on the edge, ~1 in the center). */
 function honeycomb(u: number, v: number, size: number) {
   const q = u / size, r = v / (size * 0.866);
   const row = Math.floor(r);
   const qq = q + (row % 2 ? 0.5 : 0);
-  const cx = Math.floor(qq) + 0.5, cy = row + 0.5;
-  const dx = Math.abs(qq - cx), dy = Math.abs(r - cy) * 0.866;
+  const dx = Math.abs(qq - Math.floor(qq) - 0.5), dy = Math.abs(r - row - 0.5) * 0.866;
   const d = Math.max(dx * 0.866 + dy * 0.5, dy);
-  return Math.min(1, Math.max(0, (0.5 - d) * 6));
+  return Math.min(1, Math.max(0, (0.5 - d) * 7));
 }
 
 function dimples(u: number, v: number, size: number) {
-  const fx = (u / size) % 1, fy = (v / size) % 1;
-  const dx = (fx < 0 ? fx + 1 : fx) - 0.5, dy = (fy < 0 ? fy + 1 : fy) - 0.5;
-  return Math.min(1, Math.hypot(dx, dy) * 2.6);
+  const fx = u / size - Math.floor(u / size) - 0.5, fy = v / size - Math.floor(v / size) - 0.5;
+  return Math.min(1, Math.hypot(fx, fy) * 2.6);
 }
 
-function shade(c: RGB, k: number): RGB {
-  return [c[0] * k, c[1] * k, c[2] * k];
-}
+const mix = (a: RGB, b: RGB, t: number): RGB => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+const shade = (c: RGB, k: number): RGB => [c[0] * k, c[1] * k, c[2] * k];
+const smooth = (e0: number, e1: number, x: number) => {
+  const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0)));
+  return t * t * (3 - 2 * t);
+};
 
-function moltenPixel(x: number, y: number, z: number): { c: RGB; b: number } {
-  const f = cubeFace(x, y, z);
-  // gentle S-curve on the strip borders, like the real curved panels
-  const bend = 0.16 * Math.sin(f.along * Math.PI * 0.95) * f.s;
-  const a = f.across + bend;
-  const strip = a < -1 / 3 ? 0 : a < 1 / 3 ? 1 : 2;
-  const edge = Math.min(Math.abs(a + 1 / 3), Math.abs(a - 1 / 3));
-  const faceEdge = 1 - Math.max(Math.abs(f.along), Math.abs(f.across));
-  // tri-colour: each face carries green · white · red, mirrored on the opposite face
-  const order: RGB[] = f.s > 0 ? [MOLTEN.green, MOLTEN.white, MOLTEN.red] : [MOLTEN.red, MOLTEN.white, MOLTEN.green];
-  let c = order[strip];
-  // thin accent piping inside the white strip
-  if (strip === 1 && edge > 0.025 && edge < 0.05) c = f.i === 1 ? MOLTEN.red : MOLTEN.green;
-  const seam = edge < 0.012 || faceEdge < 0.012;
-  const hc = honeycomb(f.along + 2, f.across + 2, 0.045);
-  if (seam) return { c: shade(c, 0.62), b: 40 };
-  return { c: shade(c, 0.94 + hc * 0.06), b: 150 + hc * 90 };
-}
-
-function beachPixel(x: number, y: number, z: number, u: number): { c: RGB; b: number } {
-  const lat = Math.asin(Math.max(-1, Math.min(1, y)));
-  const SECT = 10;
-  // swirl: panels twist toward the poles (pin-wheel), 10 panels alternating yellow / blue
-  const tw = u + 0.2 * Math.sin(lat * 2.2) + 0.05 * Math.sin(lat * 6);
-  const f = tw * SECT;
-  const idx = ((Math.floor(f) % SECT) + SECT) % SECT;
-  const fr = f - Math.floor(f);
-  let c: RGB = idx % 2 === 0 ? BEACH.yellow : BEACH.blue;
-  if (idx % 2 === 1) {
-    if (fr > 0.62 && fr < 0.8 && Math.abs(lat) < 1.3) c = BEACH.white;
-    else if (fr > 0.8 && fr < 0.86 && Math.abs(lat) < 1.25) c = BEACH.red;
-  }
-  const seamW = 0.02 / Math.max(0.22, Math.cos(lat));
-  const seam = Math.min(fr, 1 - fr) < seamW;
-  const polar = Math.abs(lat) > 1.48;
-  if (polar) c = BEACH.blue;
+/** Indoor ball: S-curved bands cycling white → red → green, printed honeycomb, thin seams. */
+function moltenPixel(lat: number, lon: number, x: number, y: number, z: number): { c: RGB; b: number } {
+  const W = 0.56;
+  const f = lat + 0.62 * Math.sin(lon) + 0.14 * Math.sin(2 * lon);
+  const n = Math.round(f / W);
+  const fr = f / W - n; // −0.5 … 0.5 inside a band
+  const cyc: RGB[] = [MOLTEN.white, MOLTEN.red, MOLTEN.green];
+  let c = cyc[((n % 3) + 3) % 3];
   const fc = cubeFace(x, y, z);
-  const dp = dimples(fc.along + 2, fc.across + 2, 0.05);
-  if (seam && !polar) return { c: shade(c, 0.55), b: 40 };
-  return { c: shade(c, 0.95 + dp * 0.05), b: 150 + dp * 90 };
+  const hc = honeycomb(fc.along + 2, fc.across + 2, 0.085);
+  // printed honeycomb is darker on the coloured panels, barely visible on white
+  const isWhite = c === MOLTEN.white;
+  c = shade(c, isWhite ? 0.97 + hc * 0.03 : 0.86 + hc * 0.14);
+  const seam = 0.5 - Math.abs(fr) < 0.018;
+  if (seam) return { c: MOLTEN.seam, b: 60 };
+  return { c, b: 170 + hc * 70 };
+}
+
+/** Beach ball: blue · white · yellow · white · blue bands; blue fades through purple to red with halftone dots. */
+function beachPixel(lat: number, lon: number, x: number, y: number, z: number): { c: RGB; b: number } {
+  const W = 0.5;
+  const f = lat + 0.3 * Math.sin(lon) + 0.06 * Math.sin(2 * lon);
+  const n = Math.round(f / W);
+  const fr = f / W - n;
+  const an = Math.abs(n);
+  let c: RGB = an === 0 ? BEACH.yellow : an === 1 ? BEACH.white : an === 2 ? BEACH.blue : BEACH.white;
+  const fc = cubeFace(x, y, z);
+  if (an === 2) {
+    // warm gradient on one side of each blue band, printed as halftone dots
+    const g = (Math.cos(2 * (lon - Math.PI) + (n > 0 ? 1.1 : -1.1)) + 1) / 2;
+    const t = smooth(0.55, 1.0, g) * 0.92;
+    const dot = dimples(fc.along + 2, fc.across + 2, 0.035);
+    const warm = t < 0.5 ? mix(BEACH.purple, BEACH.red, t * 2) : mix(BEACH.red, BEACH.orange, (t - 0.5) * 2);
+    if (dot < t * 0.95) c = warm;
+  }
+  const dp = dimples(fc.along + 7, fc.across + 7, 0.05);
+  c = shade(c, 0.95 + dp * 0.05);
+  const seam = 0.5 - Math.abs(fr) < 0.016;
+  if (seam) return { c: shade(c, 0.7), b: 60 };
+  return { c, b: 170 + dp * 70 };
+}
+
+function drawWordmark(ctx: CanvasRenderingContext2D, W: number, H: number, text: string, color: string, yOffset: number, size: number) {
+  ctx.save();
+  ctx.translate(W / 2, H / 2 + yOffset);
+  ctx.transform(1, 0, -0.18, 1, 0, 0); // italic slant
+  ctx.font = `900 ${size}px "Arial Black", "Helvetica Neue", Arial, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = color;
+  ctx.fillText(text, 0, 0);
+  ctx.restore();
 }
 
 function makeTextures(design: BallDesign) {
@@ -101,14 +111,13 @@ function makeTextures(design: BallDesign) {
   const cx = col.getContext('2d')!, bx = bump.getContext('2d')!;
   const ci = cx.createImageData(W, H), bi = bx.createImageData(W, H);
   for (let j = 0; j < H; j++) {
-    const theta = (j / H) * Math.PI; // 0 top → π bottom
+    const theta = ((j + 0.5) / H) * Math.PI;
     const st = Math.sin(theta), ct = Math.cos(theta);
+    const lat = Math.PI / 2 - theta;
     for (let i = 0; i < W; i++) {
-      const u = i / W;
-      const phi = u * Math.PI * 2;
-      // same parametrisation as THREE.SphereGeometry
-      const x = -Math.cos(phi) * st, y = ct, z = Math.sin(phi) * st;
-      const { c, b } = design === 'molten' ? moltenPixel(x, y, z) : beachPixel(x, y, z, u);
+      const phi = ((i + 0.5) / W) * Math.PI * 2;
+      const x = -Math.cos(phi) * st, y = ct, z = Math.sin(phi) * st; // THREE.SphereGeometry parametrisation
+      const { c, b } = design === 'molten' ? moltenPixel(lat, phi, x, y, z) : beachPixel(lat, phi, x, y, z);
       const o = (j * W + i) * 4;
       ci.data[o] = c[0];
       ci.data[o + 1] = c[1];
@@ -120,6 +129,13 @@ function makeTextures(design: BallDesign) {
   }
   cx.putImageData(ci, 0, 0);
   bx.putImageData(bi, 0, 0);
+  // site wordmark on the main band (no third-party logos)
+  if (design === 'molten') {
+    drawWordmark(cx, W, H, 'VOLLEARN', '#141414', 0, 92);
+  } else {
+    drawWordmark(cx, W, H, 'VOLLEARN', '#141414', -H * 0.16, 74);
+    drawWordmark(cx, W, H, 'BEACH', '#1E3FA8', 0, 92);
+  }
   const map = new THREE.CanvasTexture(col);
   map.colorSpace = THREE.SRGBColorSpace;
   map.anisotropy = 8;
@@ -148,13 +164,14 @@ function Ball({ design, spin }: { design: BallDesign; spin: boolean }) {
   const ref = useRef<THREE.Mesh>(null);
   const tex = useMemo(() => makeTextures(design), [design]);
   useEffect(() => () => { tex.map.dispose(); tex.bumpMap.dispose(); }, [tex]);
-  useFrame((_, dt) => {
-    if (spin && ref.current) ref.current.rotation.y += dt * 0.35;
+  useFrame(({ clock }) => {
+    // gentle sway so the front (wordmark) stays in view; drag to look around
+    if (spin && ref.current) ref.current.rotation.y = -Math.PI / 2 - 0.3 + Math.sin(clock.elapsedTime * 0.45) * 0.45;
   });
   return (
-    <mesh ref={ref} rotation={[0.42, 0.6, 0.18]}>
+    <mesh ref={ref} rotation={[0.22, -Math.PI / 2 - 0.3, 0.12]}>
       <sphereGeometry args={[1, 128, 96]} />
-      <meshPhysicalMaterial map={tex.map} bumpMap={tex.bumpMap} bumpScale={design === 'molten' ? 1.4 : 1.1}
+      <meshPhysicalMaterial map={tex.map} bumpMap={tex.bumpMap} bumpScale={design === 'molten' ? 1.2 : 1.0}
         roughness={design === 'molten' ? 0.62 : 0.5} clearcoat={0.1} clearcoatRoughness={0.6} envMapIntensity={0.3} />
     </mesh>
   );
@@ -170,7 +187,7 @@ export default function Ball3D({ still = false, design = 'molten' }: { still?: b
       <directionalLight position={[-4, -1, -2]} intensity={0.35} color="#bcd4ff" />
       <Ball design={design} spin={!still} />
       <ContactShadows position={[0, -1.2, 0]} opacity={0.4} scale={5} blur={2.4} far={2} />
-      <OrbitControls enableZoom={false} enablePan={false} autoRotate={!still} autoRotateSpeed={0.6} />
+      <OrbitControls enableZoom={false} enablePan={false} autoRotate={false} />
     </Canvas>
   );
 }
