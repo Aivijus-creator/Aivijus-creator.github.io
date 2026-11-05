@@ -363,7 +363,6 @@ export default function SystemPage({ sys }: { sys: SystemId }) {
     });
   }
 
-  const ballColors: [string, string] = ['#FFC72C', '#1565C0'];
   const concept = t.systems[sys];
   const attackersNow = S.formation(k, 'attack', mode).filter((p) => isFront(p.zone) && p.tag === 'attacker').length;
 
@@ -429,7 +428,7 @@ export default function SystemPage({ sys }: { sys: SystemId }) {
                     setTab('zones');
                   } else setZoneSel(null);
                 }}
-                overlay={flight ? <BallFlight key={flight.key} segs={flight.segs} colors={ballColors} /> : null}
+                overlay={flight ? <BallFlight key={flight.key} segs={flight.segs} design="molten" /> : null}
               />
             </div>
 

@@ -1,28 +1,13 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useT } from '../i18n';
-import { Ball2D } from '../components/Ball2D';
 import { PageFade } from '../components/ui';
+import { BallStage } from '../components/BallStage';
 import { MiniCourt } from './MiniCourt';
 import type { SystemId } from '../data/types';
 
-const Ball3D = lazy(() => import('../three/Ball3D'));
-
-function webglOk() {
-  try {
-    const c = document.createElement('canvas');
-    return !!(c.getContext('webgl2') || c.getContext('webgl'));
-  } catch {
-    return false;
-  }
-}
-
 export default function Home() {
   const { t } = useT();
-  const reduce = !!useReducedMotion();
-  const [gl, setGl] = useState(false);
-  useEffect(() => { setGl(webglOk()); }, []);
   const ids: SystemId[] = ['5-1', '6-2', '4-2'];
   return (
     <PageFade>
@@ -41,15 +26,7 @@ export default function Home() {
             </ul>
           </div>
           <div>
-            <div className="ball-stage" aria-label={t.home.dragBall}>
-              <Suspense fallback={<div className="ball-fallback"><svg viewBox="-1.2 -1.2 2.4 2.4" width="70%"><Ball2D r={1} /></svg></div>}>
-                {gl ? (
-                  <Ball3D still={reduce} />
-                ) : (
-                  <div className="ball-fallback"><svg viewBox="-1.2 -1.2 2.4 2.4" width="70%"><Ball2D r={1} /></svg></div>
-                )}
-              </Suspense>
-            </div>
+            <BallStage design="molten" label={t.home.dragBall} />
             <p className="muted" style={{ textAlign: 'center', fontSize: 13, margin: '4px 0 0' }}>↻ {t.home.dragBall}</p>
           </div>
         </section>

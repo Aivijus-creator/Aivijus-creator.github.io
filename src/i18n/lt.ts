@@ -3,7 +3,7 @@ import type { Dict } from './en';
 /** Lietuvių kalba. Terminai: kėlėjas, krašto puolėjas, vidurio blokuotojas, diagonalinis puolėjas, libero. */
 export const lt: Dict = {
   lang: 'lt',
-  siteName: 'Tinklinio sistemos',
+  siteName: 'Vollearn',
   nav: { home: 'Pradžia', rules: 'Taisyklės', compare: 'Palyginimas', sandbox: 'Smėlio dėžė', quiz: 'Testas', beach: 'Paplūdimio tinklinis', menu: 'Meniu' },
   code: { S: 'K', S1: 'K1', S2: 'K2', OH1: 'KP1', OH2: 'KP2', MB1: 'VB1', MB2: 'VB2', OPP: 'D', L: 'L' },
   roleName: { setter: 'Kėlėjas', oh: 'Krašto puolėjas', mb: 'Vidurio blokuotojas', opp: 'Diagonalinis puolėjas', libero: 'Libero', setterHitter: 'Kėlėjas-puolėjas', hitter: 'Puolėjas' },
@@ -194,7 +194,7 @@ export const lt: Dict = {
   },
   home: {
     kicker: 'Interaktyvus tinklinio vadovas',
-    title: 'Kur stovėti. Kodėl. Kur bėgti.',
+    title: 'Kur stovėti ir kodėl.',
     lead: 'Visos 5-1, 6-2 ir 4-2 rotacijos — aikštelėje, su animacija.',
     cta: 'Pradėk nuo 5-1',
     rulesCta: 'Taisyklės per 2 minutes',

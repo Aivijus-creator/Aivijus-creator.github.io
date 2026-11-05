@@ -1,4 +1,4 @@
-# Tinklinio sistemos · Volleyball Systems
+# Vollearn
 
 Interaktyvi svetainė apie tinklinio sistemas **5-1, 6-2 ir 4-2** (ir paplūdimio tinklinį 2×2).
 Kalbos: **lietuvių** (numatytoji) ir anglų — perjungiama viršuje (LT / EN).

@@ -1,11 +1,14 @@
 import { motion, useReducedMotion } from 'framer-motion';
 import { useId } from 'react';
 
-/** Shaded SVG ball in the classic blue/yellow look (no logos). Centered at (0,0), radius r. */
-export function Ball2D({ r = 0.22, spinning = false, colors = ['#FFC72C', '#1565C0'] }: { r?: number; spinning?: boolean; colors?: [string, string] }) {
+export type Ball2DDesign = 'molten' | 'beachPro';
+
+/** Shaded SVG ball (no logos). 'molten' = white/green/red indoor ball, 'beachPro' = yellow/blue swirl beach ball. */
+export function Ball2D({ r = 0.22, spinning = false, design = 'molten' }: { r?: number; spinning?: boolean; design?: Ball2DDesign }) {
   const id = useId().replace(/:/g, '');
   const reduce = useReducedMotion();
-  const [c1, c2] = colors;
+  const m = design === 'molten';
+  const base = m ? '#F4F3EE' : '#FFCF1A';
   return (
     <g>
       <defs>
@@ -19,17 +22,27 @@ export function Ball2D({ r = 0.22, spinning = false, colors = ['#FFC72C', '#1565
         </radialGradient>
       </defs>
       <g clipPath={`url(#bc${id})`}>
-        <circle r={r} fill={c1} />
+        <circle r={r} fill={base} />
         <motion.g
           animate={spinning && !reduce ? { rotate: 360 } : { rotate: 0 }}
           transition={spinning ? { duration: 0.6, repeat: Infinity, ease: 'linear' } : { duration: 0 }}
         >
           <g transform={`scale(${r})`} strokeLinecap="round">
-            {/* curved panels */}
-            <path d="M -1.2 -0.35 C -0.5 -0.75 0.4 -0.7 1.2 -0.2 L 1.2 0.18 C 0.4 -0.3 -0.5 -0.35 -1.2 0.05 Z" fill={c2} />
-            <path d="M -0.55 1.2 C -0.2 0.5 0.15 0.2 0.85 -0.15 L 1.2 0.5 C 0.6 0.6 0.25 0.9 0.05 1.3 Z" fill={c2} />
-            <path d="M -1.2 0.45 C -0.8 0.3 -0.45 0.45 -0.3 1.2" fill="none" stroke={c2} strokeWidth={0.22} />
-            <g fill="none" stroke="rgba(0,0,0,.35)" strokeWidth={0.05}>
+            {m ? (
+              <>
+                <path d="M -1.2 -0.55 C -0.5 -0.95 0.4 -0.9 1.2 -0.4 L 1.2 -0.08 C 0.4 -0.55 -0.5 -0.6 -1.2 -0.22 Z" fill="#0B8F4D" />
+                <path d="M -1.2 0.22 C -0.4 -0.12 0.4 -0.08 1.2 0.38 L 1.2 0.7 C 0.4 0.25 -0.4 0.2 -1.2 0.55 Z" fill="#D3202C" />
+                <path d="M 0.15 1.2 C 0.3 0.95 0.6 0.85 1.2 0.85" fill="none" stroke="#0B8F4D" strokeWidth={0.12} />
+              </>
+            ) : (
+              <>
+                <path d="M -1.2 -0.35 C -0.5 -0.75 0.4 -0.7 1.2 -0.2 L 1.2 0.18 C 0.4 -0.3 -0.5 -0.35 -1.2 0.05 Z" fill="#1B4FAE" />
+                <path d="M -1.2 -0.02 C -0.5 -0.4 0.4 -0.36 1.2 0.12" fill="none" stroke="#fff" strokeWidth={0.08} />
+                <path d="M -0.55 1.2 C -0.2 0.5 0.15 0.2 0.85 -0.15 L 1.2 0.5 C 0.6 0.6 0.25 0.9 0.05 1.3 Z" fill="#1B4FAE" />
+                <path d="M -0.4 1.2 C -0.1 0.6 0.2 0.35 0.9 0.02" fill="none" stroke="#D8262F" strokeWidth={0.06} />
+              </>
+            )}
+            <g fill="none" stroke="rgba(0,0,0,.3)" strokeWidth={0.04}>
               <path d="M -1.2 -0.6 C -0.4 -1 0.5 -0.95 1.2 -0.45" />
               <path d="M -1.2 0.25 C -0.4 -0.1 0.4 -0.05 1.2 0.4" />
               <path d="M -0.1 1.2 C 0.1 0.6 0.5 0.3 1.2 0.05" />
@@ -52,7 +65,7 @@ export interface FlightSeg {
 }
 
 /** Ball flying along arcs. Height lifts the ball up on screen and makes it bigger; shadow stays on the floor. */
-export function BallFlight({ segs, colors, onDone }: { segs: FlightSeg[]; colors?: [string, string]; onDone?: () => void }) {
+export function BallFlight({ segs, design = 'molten', onDone }: { segs: FlightSeg[]; design?: Ball2DDesign; onDone?: () => void }) {
   const N = 10;
   const xs: number[] = [], ys: number[] = [], sc: number[] = [], sx: number[] = [], sy: number[] = [], ss: number[] = [], times: number[] = [];
   const total = segs.reduce((a, s) => a + s.duration, 0);
@@ -80,7 +93,7 @@ export function BallFlight({ segs, colors, onDone }: { segs: FlightSeg[]; colors
     <g pointerEvents="none">
       <motion.ellipse rx={0.2} ry={0.08} fill="rgba(0,0,0,.25)" initial={{ x: sx[0], y: sy[0] }} animate={{ x: sx, y: sy, scale: ss }} transition={tr} />
       <motion.g initial={{ x: xs[0], y: ys[0] }} animate={{ x: xs, y: ys, scale: sc }} transition={tr} onAnimationComplete={onDone}>
-        <Ball2D spinning colors={colors} />
+        <Ball2D spinning design={design} />
       </motion.g>
       {pops.map((p, i) => (
         <motion.circle key={i} cx={p.x} cy={p.y} r={0.3} fill="none" stroke="#fff" strokeWidth={0.06}

@@ -27,8 +27,8 @@ function Header() {
   ];
   const Lang = (
     <div className="lang" role="group" aria-label="Language">
-      <button aria-pressed={lang === 'lt'} onClick={() => setLang('lt')}>LT</button>
-      <button aria-pressed={lang === 'en'} onClick={() => setLang('en')}>EN</button>
+      <button type="button" aria-pressed={lang === 'lt'} onClick={() => setLang('lt')} title="Lietuvių">LT</button>
+      <button type="button" aria-pressed={lang === 'en'} onClick={() => setLang('en')} title="English">EN</button>
     </div>
   );
   return (
@@ -42,11 +42,11 @@ function Header() {
           </svg>
           {t.siteName}
         </Link>
+        {Lang}
         <nav className="nav" aria-label="Main">
           {links.map(([to, l]) => <NavLink key={to} to={to}>{l}</NavLink>)}
           <NavLink to="/beach" className="nav__beach">🏖 {t.nav.beach}</NavLink>
         </nav>
-        {Lang}
         <button className="burger" aria-label={t.nav.menu} aria-expanded={open} onClick={() => setOpen(!open)}>
           <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden><path d={open ? 'M5 5l14 14M19 5L5 19' : 'M3 7h18M3 12h18M3 17h18'} stroke="#fff" strokeWidth="2.2" strokeLinecap="round" /></svg>
         </button>

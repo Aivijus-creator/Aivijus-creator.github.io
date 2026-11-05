@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useT } from '../i18n';
 import { PageFade, sleep } from '../components/ui';
+import { BallStage } from '../components/BallStage';
 import { Court, type CourtPlayer } from '../components/Court';
 import { BallFlight, type FlightSeg } from '../components/Ball2D';
 import { beachRally, initialBeach, isSideSwitch, type BeachState } from '../logic/beach';
@@ -116,7 +117,7 @@ function RallyDemo() {
   return (
     <div>
       <BeachCourt players={players} label={t.beach.rallyTitle} opponents={[bp('MB1', '', 3, -2.2), bp('MB2', '', 5.6, -2.0)]}
-        overlay={flight ? <BallFlight key={flight.key} segs={flight.segs} /> : null}
+        overlay={flight ? <BallFlight key={flight.key} segs={flight.segs} design="beachPro" /> : null}
         extra={splash ? <Splash key={splash.k} x={splash.x} y={splash.y} /> : null} />
       <ol className="bullets" style={{ marginTop: 10 }}>
         {steps.map((s, i) => (
@@ -218,9 +219,12 @@ export default function Beach() {
       <PageFade>
         <div className="page">
           <div className="beach-hero">
-            <p className="kicker">🏖 2×2</p>
-            <h1 className="bar">{B.title}</h1>
-            <p style={{ fontSize: 18, margin: 0, fontWeight: 500 }}>{B.lead}</p>
+            <div>
+              <p className="kicker">🏖 2×2</p>
+              <h1 className="bar">{B.title}</h1>
+              <p style={{ fontSize: 18, margin: 0, fontWeight: 500 }}>{B.lead}</p>
+            </div>
+            <BallStage design="beachPro" label={t.home.dragBall} size={300} />
           </div>
 
           <section>

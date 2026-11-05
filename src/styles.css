@@ -211,7 +211,7 @@ h3 {
 }
 .nav {
   display: none;
-  gap: 2px;
+  gap: 0;
   margin-left: auto;
   align-items: center;
 }
@@ -249,10 +249,8 @@ h3 {
   border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 999px;
   overflow: hidden;
-  margin-left: auto;
-}
-.nav + .lang {
-  margin-left: 8px;
+  margin-left: 4px;
+  flex: none;
 }
 .lang button {
   background: none;
@@ -274,6 +272,7 @@ h3 {
   color: #0b3d6e;
 }
 .burger {
+  margin-left: auto;
   background: none;
   border: 0;
   color: #fff;
@@ -298,7 +297,7 @@ h3 {
   min-height: 44px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
-@media (min-width: 900px) {
+@media (min-width: 1080px) {
   .nav {
     display: flex;
   }
@@ -326,7 +325,7 @@ h3 {
   box-shadow: var(--shadow);
   font-size: 14px;
 }
-@media (max-width: 899px) {
+@media (max-width: 1079px) {
   .beach-tab {
     display: none;
   }
@@ -1028,6 +1027,9 @@ table.t tr:last-child th {
 
 /* beach */
 .beach-hero {
+  display: grid;
+  gap: 8px;
+  align-items: center;
   margin-bottom: 32px;
   border-radius: 20px;
   padding: 24px 18px;
@@ -1182,4 +1184,16 @@ table.t tr:last-child th {
   .hide-mobile {
     display: inline;
   }
+}
+
+@media (min-width: 760px) {
+  .beach-hero {
+    grid-template-columns: 1fr 300px;
+  }
+}
+.beach-hero .ball-stage {
+  max-width: 260px;
+}
+.beach-hero .ball-stage::before {
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.6), transparent 70%);
 }

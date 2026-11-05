@@ -4,7 +4,7 @@ type ZoneTexts = Partial<Record<PlayerId, string>>;
 
 export const en = {
   lang: 'en' as 'en' | 'lt',
-  siteName: 'Volley Systems',
+  siteName: 'Vollearn',
   nav: { home: 'Home', rules: 'Rules', compare: 'Compare', sandbox: 'Sandbox', quiz: 'Quiz', beach: 'Beach volleyball', menu: 'Menu' },
   code: { S: 'S', S1: 'S1', S2: 'S2', OH1: 'OH1', OH2: 'OH2', MB1: 'MB1', MB2: 'MB2', OPP: 'OPP', L: 'L' } as Record<PlayerId, string>,
   roleName: { setter: 'Setter', oh: 'Outside hitter', mb: 'Middle blocker', opp: 'Opposite', libero: 'Libero', setterHitter: 'Setter-hitter', hitter: 'Hitter' },
@@ -195,7 +195,7 @@ export const en = {
   },
   home: {
     kicker: 'Interactive volleyball guide',
-    title: 'Where to stand. Why. Where to run.',
+    title: 'Where to stand and why.',
     lead: 'Every rotation of the 5-1, 6-2 and 4-2 — on a court, animated.',
     cta: 'Start with the 5-1',
     rulesCta: 'Rules in 2 minutes',
