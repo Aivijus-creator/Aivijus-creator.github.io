@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, NavLink, Route, Routes, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useT } from './i18n';
+import { Logo } from './components/Logo';
 import Home from './pages/Home';
 import Rules from './pages/Rules';
 import SystemPage from './pages/SystemPage';
@@ -36,11 +37,7 @@ function Header() {
       <div className="header__beach-layer" />
       <div className="header__in">
         <Link to="/" className="brand" aria-label={t.siteName}>
-          <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden>
-            <circle cx="16" cy="16" r="14" fill="#FFC72C" stroke="#fff" strokeWidth="2" />
-            <path d="M4 13c8 1 16 6 20 14M16 2c-3 8-2 18 6 26M29 12c-8 0-15 4-20 15" fill="none" stroke="#1565C0" strokeWidth="2.6" />
-          </svg>
-          {t.siteName}
+          <Logo size={42} />
         </Link>
         {Lang}
         <nav className="nav" aria-label="Main">
@@ -88,7 +85,7 @@ export default function App() {
           <Route path="*" element={<Home />} />
         </Routes>
       </main>
-      <footer className="footer">{t.siteName} · FIVB · 5-1 · 6-2 · 4-2 · 2×2</footer>
+      <footer className="footer"><Logo size={26} /><div>5-1 · 6-2 · 4-2 · 2×2</div></footer>
     </>
   );
 }
