@@ -32,7 +32,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --accent-900: #5a0a17;
     --accent-700: #c8203b;
     --accent-500: #f0435a;
@@ -57,6 +57,30 @@
     color-scheme: dark;
   }
 }
+:root[data-theme='dark'] {
+    --accent-900: #5a0a17;
+    --accent-700: #c8203b;
+    --accent-500: #f0435a;
+    --accent-100: #3a1419;
+    --sun-500: #ffd54f;
+    --sun-100: #33301c;
+    --white: #16161a;
+    --paper: #1e1d22;
+    --ink: #f4f2f0;
+    --muted: #a19da6;
+    --court: #2b2427;
+    --court-line: #f4f2f0;
+    --court-line-outline: rgba(0, 0, 0, 0.3);
+    --net: #0c0c0e;
+    --ok: #3ccb86;
+    --bad: #ff5a6e;
+    --border: rgba(244, 242, 240, 0.1);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 24px rgba(0, 0, 0, 0.3);
+    --figure: #f4f2f0;
+    --opp-half: rgba(160, 160, 170, 0.18);
+    --sand: #3a3225;
+    color-scheme: dark;
+}
 
 [data-theme-scope='beach'] {
   --jersey: var(--accent-700);
@@ -69,7 +93,7 @@
   --court-line-outline: transparent;
 }
 @media (prefers-color-scheme: dark) {
-  [data-theme-scope='beach'] {
+  :root:not([data-theme='light']) [data-theme-scope='beach'] {
     --accent-900: #082b4e;
     --accent-700: #3a86e0;
     --accent-500: #5bbef5;
@@ -77,6 +101,14 @@
     --court-line: #e1f2fc;
     --jersey: var(--accent-700);
   }
+}
+:root[data-theme='dark'] [data-theme-scope='beach'] {
+    --accent-900: #082b4e;
+    --accent-700: #3a86e0;
+    --accent-500: #5bbef5;
+    --accent-100: #13283a;
+    --court-line: #e1f2fc;
+    --jersey: var(--accent-700);
 }
 
 * {
