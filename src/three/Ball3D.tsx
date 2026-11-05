@@ -90,15 +90,36 @@ function beachPixel(lat: number, lon: number, x: number, y: number, z: number): 
   return { c, b: 170 + dp * 70 };
 }
 
-function drawWordmark(ctx: CanvasRenderingContext2D, W: number, H: number, text: string, color: string, yOffset: number, size: number) {
+function drawText(ctx: CanvasRenderingContext2D, W: number, H: number, o: { text: string; color: string; y: number; size: number; slant?: number; stroke?: string; spacing?: number; scaleX?: number }) {
   ctx.save();
-  ctx.translate(W / 2, H / 2 + yOffset);
-  ctx.transform(1, 0, -0.18, 1, 0, 0); // italic slant
-  ctx.font = `900 ${size}px "Arial Black", "Helvetica Neue", Arial, sans-serif`;
+  ctx.translate(W / 2, H / 2 + o.y);
+  ctx.transform(o.scaleX ?? 1, 0, -(o.slant ?? 0), 1, 0, 0);
+  ctx.font = `900 ${o.size}px "Arial Black", "Helvetica Neue", Arial, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
+  if ('letterSpacing' in ctx && o.spacing !== undefined) (ctx as unknown as { letterSpacing: string }).letterSpacing = `${o.spacing}px`;
+  if (o.stroke) {
+    ctx.lineWidth = o.size * 0.06;
+    ctx.strokeStyle = o.stroke;
+    ctx.strokeText(o.text, 0, 0);
+  } else {
+    ctx.fillStyle = o.color;
+    ctx.fillText(o.text, 0, 0);
+  }
+  ctx.restore();
+}
+
+function drawStar(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, color: string) {
+  ctx.save();
   ctx.fillStyle = color;
-  ctx.fillText(text, 0, 0);
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const rr = i % 2 ? r * 0.45 : r;
+    ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+  }
+  ctx.closePath();
+  ctx.fill();
   ctx.restore();
 }
 
@@ -129,12 +150,15 @@ function makeTextures(design: BallDesign) {
   }
   cx.putImageData(ci, 0, 0);
   bx.putImageData(bi, 0, 0);
-  // site wordmark on the main band (no third-party logos)
+  // printed marks, placed like on the real balls
   if (design === 'molten') {
-    drawWordmark(cx, W, H, 'VOLLEARN', '#141414', 0, 92);
+    drawText(cx, W, H, { text: '5000', color: '', stroke: 'rgba(255,255,255,0.55)', y: -H * 0.115, size: 56, spacing: 8, scaleX: 1.3 });
+    drawText(cx, W, H, { text: 'molten', color: '#111111', y: 0, size: 118, spacing: -4, scaleX: 1.05 });
+    drawText(cx, W, H, { text: 'FLISTATEC', color: 'rgba(255,255,255,0.75)', y: H * 0.15, size: 30, slant: 0.15, spacing: 4 });
   } else {
-    drawWordmark(cx, W, H, 'VOLLEARN', '#141414', -H * 0.16, 74);
-    drawWordmark(cx, W, H, 'BEACH', '#1E3FA8', 0, 92);
+    drawText(cx, W, H, { text: 'BEACH PRO', color: '#111111', y: -H * 0.155, size: 84, slant: 0.12, scaleX: 1.05 });
+    drawText(cx, W, H, { text: 'MIKASA', color: '#1B2A8C', y: H * 0.005, size: 112, slant: 0.04, spacing: 0, scaleX: 1.12 });
+    drawStar(cx, W / 2 - 10, H / 2 - H * 0.075, 20, '#1B2A8C');
   }
   const map = new THREE.CanvasTexture(col);
   map.colorSpace = THREE.SRGBColorSpace;
