@@ -20,7 +20,7 @@ npm test         # Vitest: overlap, rotations, libero, 6-2 mapping, texts
   animuoti žaidėjai su pozomis, judėjimo rodyklės, persidengimo linijos, kamuolio skrydis („Žaisti“),
   mygtukas **↻ Pereiti** (rotacija su libero keitimu), auto režimas, klavišai → ← Tarpas, brauktukas mobiliajame.
 - **Paspausk žaidėją → „Kodėl čia?“**: paaiškinimas, automatinės persidengimo taisyklės ✅/❌, kur bėgs toliau.
-- **Taisyklės**, **Palyginimas**, **Smėlio dėžė** (tempk žaidėjus — tikrinimas iš karto), **Testas**.
+- **Taisyklės**, **Palyginimas**, **Laisvas režimas** (tempk žaidėjus — tikrinimas iš karto), **Testas**.
 - **3D kamuolys** pradžios puslapyje (Three.js, generuojama mėlyna/geltona tekstūra, užkraunama tik ten).
 
 Terminai LT: kėlėjas (K), krašto puolėjas (KP), vidurio blokuotojas (VB), diagonalinis puolėjas (D), libero (L).

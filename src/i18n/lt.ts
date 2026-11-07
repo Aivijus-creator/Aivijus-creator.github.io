@@ -4,7 +4,7 @@ import type { Dict } from './en';
 export const lt: Dict = {
   lang: 'lt',
   siteName: 'Vollearn',
-  nav: { systems: 'Sistemos', tools: 'Įrankiai', desc: { '5-1': 'Vienas kėlėjas, penki puolėjai', '6-2': 'Du kėlėjai, visada trys puolėjai', '4-2': 'Kėlėjas visada prie tinklo', sandbox: 'Statyk žaidėjus pats', quiz: 'Patikrink, ką išmokai', compare: 'Dvi sistemos greta', rules: 'Rotacija, persidengimas, galinė linija ir libero' }, home: 'Pradžia', rules: 'Taisyklės', compare: 'Palyginimas', sandbox: 'Smėlio dėžė', quiz: 'Testas', menu: 'Meniu' },
+  nav: { systems: 'Sistemos', tools: 'Įrankiai', desc: { '5-1': 'Vienas kėlėjas, penki puolėjai', '6-2': 'Du kėlėjai, visada trys puolėjai', '4-2': 'Kėlėjas visada prie tinklo', sandbox: 'Statyk žaidėjus pats', quiz: 'Patikrink, ką išmokai', compare: 'Dvi sistemos greta', rules: 'Rotacija, persidengimas, galinė linija ir libero' }, home: 'Pradžia', rules: 'Taisyklės', compare: 'Palyginimas', sandbox: 'Laisvas režimas', quiz: 'Testas', menu: 'Meniu' },
   code: { S: 'K', S1: 'K1', S2: 'K2', OH1: 'KP1', OH2: 'KP2', MB1: 'VB1', MB2: 'VB2', OPP: 'D', L: 'L' },
   roleName: { setter: 'Kėlėjas', oh: 'Krašto puolėjas', mb: 'Vidurio blokuotojas', opp: 'Diagonalinis puolėjas', libero: 'Libero', setterHitter: 'Kėlėjas-puolėjas', hitter: 'Puolėjas' },
   phase: { receive: 'Padavimo priėmimas', attack: 'Persirikiavimas į puolimą', serve: 'Mūsų padavimas', defense: 'Gynyba' },
@@ -229,7 +229,7 @@ export const lt: Dict = {
     faqLead: 'Neradai atsakymo? Taisyklių puslapyje aprašytos visos pozicijų klaidos.',
     faqLink: 'Atidaryti taisykles',
     faq: [
-      ['Ar Vollearn nemokamas?', 'Taip. Visos sistemos, testas ir smėlio dėžė nemokami.'],
+      ['Ar Vollearn nemokamas?', 'Taip. Visos sistemos, testas ir laisvas režimas nemokami.'],
       ['Ar reikia susikurti paskyrą?', 'Ne. Atsidaryk svetainę ir iškart pradėk.'],
       ['Ar veikia telefone?', 'Taip. Aikštelė prisitaiko prie ekrano, žaidėjus spaudi pirštu.'],
       ['Kuo skiriasi 5-1 ir 6-2?', '5-1 turi vieną kėlėją visose rotacijose. 6-2 turi du: kelia tas, kuris gale, todėl priekyje visada trys puolėjai.'],
@@ -351,7 +351,7 @@ export const lt: Dict = {
     ],
     same: 'Ta pati rotacija visose trijose sistemose',
   },
-  sandbox: { title: 'Smėlio dėžė', lead: 'Įkelk bet kurią schemą, tempk žaidėjus ir laužyk taisykles.' },
+  sandbox: { title: 'Laisvas režimas', lead: 'Įkelk bet kurią schemą, tempk žaidėjus ir laužyk taisykles.' },
   quiz: {
     title: 'Testas',
     q1: 'Taisyklinga ar klaida?',
