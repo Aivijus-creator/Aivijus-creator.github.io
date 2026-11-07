@@ -4,7 +4,7 @@ import type { Dict } from './en';
 export const lt: Dict = {
   lang: 'lt',
   siteName: 'Vollearn',
-  nav: { home: 'Pradžia', rules: 'Taisyklės', compare: 'Palyginimas', sandbox: 'Smėlio dėžė', quiz: 'Testas', beach: 'Paplūdimio tinklinis', menu: 'Meniu' },
+  nav: { home: 'Pradžia', rules: 'Taisyklės', compare: 'Palyginimas', sandbox: 'Smėlio dėžė', quiz: 'Testas', beach: 'Paplūdimio tinklinis', indoor: 'Salės tinklinis', indoorTab: 'SALĖ 6×6', menu: 'Meniu' },
   code: { S: 'K', S1: 'K1', S2: 'K2', OH1: 'KP1', OH2: 'KP2', MB1: 'VB1', MB2: 'VB2', OPP: 'D', L: 'L' },
   roleName: { setter: 'Kėlėjas', oh: 'Krašto puolėjas', mb: 'Vidurio blokuotojas', opp: 'Diagonalinis puolėjas', libero: 'Libero', setterHitter: 'Kėlėjas-puolėjas', hitter: 'Puolėjas' },
   phase: { receive: 'Padavimo priėmimas', attack: 'Persirikiavimas į puolimą', serve: 'Mūsų padavimas', defense: 'Gynyba' },

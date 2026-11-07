@@ -236,6 +236,24 @@ h3 {
   opacity: 1;
   box-shadow: inset 0 -3px 0 #fff;
 }
+.nav .nav__indoor {
+  background: #e0283f;
+  color: #fff;
+  opacity: 1;
+  margin-left: 6px;
+  border-radius: 999px;
+  padding: 0 14px;
+}
+.nav .nav__indoor:hover {
+  background: #c8203b;
+}
+.mobile-menu .mobile-menu__mode {
+  color: #ff8a98;
+}
+.beach-tab.indoor-tab {
+  background: #e0283f;
+  color: #fff;
+}
 .nav .nav__beach {
   background: #ffc72c;
   color: #0b3d6e;

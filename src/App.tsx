@@ -11,7 +11,7 @@ import Sandbox from './pages/Sandbox';
 import Quiz from './pages/Quiz';
 import Beach from './pages/Beach';
 
-function Header() {
+function Header({ lastIndoor }: { lastIndoor: string }) {
   const { t, lang, setLang } = useT();
   const loc = useLocation();
   const [open, setOpen] = useState(false);
@@ -42,7 +42,11 @@ function Header() {
         {Lang}
         <nav className="nav" aria-label="Main">
           {links.map(([to, l]) => <NavLink key={to} to={to}>{l}</NavLink>)}
-          <NavLink to="/beach" className="nav__beach">🏖 {t.nav.beach}</NavLink>
+          {isBeach ? (
+            <Link to={lastIndoor} className="nav__indoor">🏐 {t.nav.indoor}</Link>
+          ) : (
+            <NavLink to="/beach" className="nav__beach">🏖 {t.nav.beach}</NavLink>
+          )}
         </nav>
         <button className="burger" aria-label={t.nav.menu} aria-expanded={open} onClick={() => setOpen(!open)}>
           <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden><path d={open ? 'M5 5l14 14M19 5L5 19' : 'M3 7h18M3 12h18M3 17h18'} stroke="#fff" strokeWidth="2.2" strokeLinecap="round" /></svg>
@@ -53,7 +57,11 @@ function Header() {
           <motion.nav className="mobile-menu" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: 'hidden' }}>
             <NavLink to="/">{t.nav.home}</NavLink>
             {links.map(([to, l]) => <NavLink key={to} to={to}>{l}</NavLink>)}
-            <NavLink to="/beach" style={{ color: '#FFC72C' }}>🏖 {t.nav.beach}</NavLink>
+            {isBeach ? (
+              <Link to={lastIndoor} className="mobile-menu__mode">🏐 {t.nav.indoor}</Link>
+            ) : (
+              <NavLink to="/beach" style={{ color: '#FFC72C' }}>🏖 {t.nav.beach}</NavLink>
+            )}
           </motion.nav>
         )}
       </AnimatePresence>
@@ -65,10 +73,16 @@ export default function App() {
   const { t } = useT();
   const loc = useLocation();
   useEffect(() => { window.scrollTo(0, 0); }, [loc.pathname]);
+  // remember the last indoor page so "Indoor volleyball" returns exactly there
+  const isBeach = loc.pathname.startsWith('/beach');
+  const [lastIndoor, setLastIndoor] = useState('/');
+  useEffect(() => { if (!isBeach) setLastIndoor(loc.pathname); }, [isBeach, loc.pathname]);
   return (
     <>
-      <Header />
-      {!loc.pathname.startsWith('/beach') && (
+      <Header lastIndoor={lastIndoor} />
+      {isBeach ? (
+        <Link to={lastIndoor} className="beach-tab indoor-tab">🏐 {t.nav.indoorTab}</Link>
+      ) : (
         <Link to="/beach" className="beach-tab">🏖 {t.beach.button}</Link>
       )}
       <main>

@@ -5,7 +5,7 @@ type ZoneTexts = Partial<Record<PlayerId, string>>;
 export const en = {
   lang: 'en' as 'en' | 'lt',
   siteName: 'Vollearn',
-  nav: { home: 'Home', rules: 'Rules', compare: 'Compare', sandbox: 'Sandbox', quiz: 'Quiz', beach: 'Beach volleyball', menu: 'Menu' },
+  nav: { home: 'Home', rules: 'Rules', compare: 'Compare', sandbox: 'Sandbox', quiz: 'Quiz', beach: 'Beach volleyball', indoor: 'Indoor volleyball', indoorTab: 'INDOOR 6v6', menu: 'Menu' },
   code: { S: 'S', S1: 'S1', S2: 'S2', OH1: 'OH1', OH2: 'OH2', MB1: 'MB1', MB2: 'MB2', OPP: 'OPP', L: 'L' } as Record<PlayerId, string>,
   roleName: { setter: 'Setter', oh: 'Outside hitter', mb: 'Middle blocker', opp: 'Opposite', libero: 'Libero', setterHitter: 'Setter-hitter', hitter: 'Hitter' },
   phase: { receive: 'Serve receive', attack: 'Switch to attack', serve: 'Our serve', defense: 'Defense base' },
