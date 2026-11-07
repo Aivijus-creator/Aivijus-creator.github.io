@@ -9,8 +9,11 @@ import {
   Sun,
   Moon,
   Zap,
+  LogOut,
+  Loader2,
 } from 'lucide-react';
 import { LevelProgress } from '../utils/gamification';
+import { Avatar } from './Avatar';
 
 interface HeaderProps {
   onOpenAddModal: () => void;
@@ -23,6 +26,9 @@ interface HeaderProps {
   onChangeView: (view: 'tracker' | 'insights') => void;
   levelProgress: LevelProgress;
   recentExpGain: { id: number; amount: number; label?: string } | null;
+  account: { userId: string; displayName: string; email: string };
+  onSignOut: () => void;
+  isSigningOut: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -36,6 +42,9 @@ export const Header: React.FC<HeaderProps> = ({
   onChangeView,
   levelProgress,
   recentExpGain,
+  account,
+  onSignOut,
+  isSigningOut,
 }) => {
   return (
     <header className="sticky top-0 z-30 bg-[#FDFBF7]/85 dark:bg-[#11100F]/85 backdrop-blur-xl border-b border-[#EDE6D8]/90 dark:border-[#292521] shadow-xs shadow-[#2C2C2C]/[0.02] dark:shadow-black/20 transition-colors duration-200">
@@ -52,13 +61,13 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FF7A00] to-[#FF5757] flex items-center justify-center text-white shadow-md shadow-[#FF7A00]/25 group-hover:scale-105 transition-transform duration-150">
             <Sparkles className="w-5 h-5" />
           </div>
-          <span className="font-['Outfit'] font-extrabold text-lg sm:text-xl tracking-tight text-[#2C2C2C] dark:text-[#F5F2EB] whitespace-nowrap shrink-0">
+          <span className="hidden md:inline font-['Outfit'] font-extrabold text-lg sm:text-xl tracking-tight text-[#2C2C2C] dark:text-[#F5F2EB] whitespace-nowrap shrink-0">
             SquadGoals
           </span>
         </a>
 
         {/* Zone 2: Navigation Tabs */}
-        <nav className="hidden md:flex items-center gap-1 bg-[#F2EDE2]/90 dark:bg-[#1E1C19] p-1 rounded-xl border border-[#E6DEC8]/60 dark:border-[#2E2A25]">
+        <nav className="hidden lg:flex items-center gap-1 bg-[#F2EDE2]/90 dark:bg-[#1E1C19] p-1 rounded-xl border border-[#E6DEC8]/60 dark:border-[#2E2A25]">
           {(
             [
               { id: 'tracker', label: "Today's Habits" },
@@ -108,7 +117,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="text-[#736C61] dark:text-[#A69E93] truncate hidden sm:inline">
                   {levelProgress.rankTitle}
                 </span>
-                <span className="text-[#2C2C2C] dark:text-[#F5F2EB] tabular-nums ml-auto">
+                <span className="text-[#2C2C2C] dark:text-[#F5F2EB] tabular-nums ml-auto whitespace-nowrap">
                   {levelProgress.currentLevelExp}/{levelProgress.expForNextLevel}{' '}
                   <span className="text-[#FF7A00]">EXP</span>
                 </span>
@@ -133,14 +142,16 @@ export const Header: React.FC<HeaderProps> = ({
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -10, scale: 0.9 }}
                   transition={{ duration: 0.2 }}
+                  role="status"
                   className={`pointer-events-none absolute -bottom-7 right-1 px-2 py-0.5 rounded-md text-[11px] font-extrabold font-['Outfit'] shadow-md whitespace-nowrap z-40 ${
-                    recentExpGain.amount >= 0
+                    recentExpGain.amount > 0
                       ? 'bg-gradient-to-r from-[#FF7A00] to-[#FF5757] text-white'
                       : 'bg-[#2C2C2C] dark:bg-[#36312C] text-[#F5F2EB]'
                   }`}
                 >
-                  {recentExpGain.amount >= 0 ? `+${recentExpGain.amount}` : recentExpGain.amount} EXP
-                  {recentExpGain.label ? ` · ${recentExpGain.label}` : ''}
+                  {recentExpGain.amount > 0
+                    ? `+${recentExpGain.amount} EXP${recentExpGain.label ? ` · ${recentExpGain.label}` : ''}`
+                    : `+0 EXP · ${recentExpGain.label ?? 'Already claimed today'}`}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -177,7 +188,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Backup / Data Management */}
           <button
             onClick={onOpenBackupModal}
-            title="Local Storage & Backup"
+            title="Backup & Reset"
             className="hidden sm:flex w-9 h-9 rounded-xl border border-[#EDE6D8] dark:border-[#2E2A25] bg-white/90 dark:bg-[#1C1A17] text-[#736C61] dark:text-[#A69E93] hover:text-[#2C2C2C] dark:hover:text-[#F5F2EB] hover:border-[#D9CFBE] dark:hover:border-[#3E3832] active:scale-95 items-center justify-center transition-all duration-150 shrink-0 cursor-pointer"
             aria-label="Manage data and storage"
           >
@@ -187,11 +198,31 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Primary CTA: Add Habit */}
           <button
             onClick={onOpenAddModal}
-            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white bg-gradient-to-r from-[#FF7A00] to-[#FF5757] hover:from-[#E86B00] hover:to-[#E64848] shadow-md shadow-[#FF7A00]/25 hover:shadow-lg hover:shadow-[#FF7A00]/35 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white bg-gradient-to-r from-[#FF7A00] to-[#FF5757] hover:from-[#E86B00] hover:to-[#E64848] shadow-md shadow-[#FF7A00]/25 hover:shadow-lg hover:shadow-[#FF7A00]/35 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
-            <span className="hidden xs:inline sm:inline">New Habit</span>
+            <span className="hidden xl:inline">New Habit</span>
           </button>
+
+          {/* Signed-in user + Log Out */}
+          <div className="flex items-center gap-1 p-1 rounded-xl border border-[#EDE6D8] dark:border-[#2E2A25] bg-white/90 dark:bg-[#1C1A17] shrink-0">
+            <Avatar
+              name={account.displayName}
+              seed={account.userId}
+              size="sm"
+              title={`Signed in as ${account.displayName} (${account.email})`}
+            />
+            <button
+              onClick={onSignOut}
+              disabled={isSigningOut}
+              title="Log out"
+              aria-label="Log out"
+              className="inline-flex items-center gap-1.5 h-7 px-1.5 xl:px-2.5 rounded-lg text-xs font-semibold text-[#736C61] dark:text-[#A69E93] hover:text-[#FF5757] hover:bg-[#FFF0F0] dark:hover:bg-[#2D1618] disabled:opacity-60 transition-colors cursor-pointer"
+            >
+              {isSigningOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
+              <span className="hidden xl:inline">Log Out</span>
+            </button>
+          </div>
         </div>
       </div>
     </header>

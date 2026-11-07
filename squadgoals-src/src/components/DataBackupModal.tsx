@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { X, HardDrive, Download, Upload, RotateCcw, Check, AlertCircle } from 'lucide-react';
-import { exportBackupJSON, importBackupJSON, resetAllData } from '../utils/storage';
+import { X, Cloud, Download, Upload, RotateCcw, Check, AlertCircle } from 'lucide-react';
 
 interface DataBackupModalProps {
   isOpen: boolean;
   onClose: () => void;
   habitsCount: number;
   historyDaysCount: number;
-  onDataReload: () => void;
+  onExport: () => string;
+  /** Returns false if the backup could not be read. */
+  onImport: (json: string) => boolean;
+  onReset: () => void;
 }
 
 export const DataBackupModal: React.FC<DataBackupModalProps> = ({
@@ -15,7 +17,9 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
   onClose,
   habitsCount,
   historyDaysCount,
-  onDataReload,
+  onExport,
+  onImport,
+  onReset,
 }) => {
   const [importText, setImportText] = useState('');
   const [showImportArea, setShowImportArea] = useState(false);
@@ -26,7 +30,7 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
 
   const handleExport = () => {
     try {
-      const json = exportBackupJSON();
+      const json = onExport();
       const blob = new Blob([json], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -44,22 +48,20 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
 
   const handleImport = () => {
     if (!importText.trim()) return;
-    const success = importBackupJSON(importText);
+    const success = onImport(importText);
     if (success) {
-      setStatusMessage({ type: 'success', text: 'Backup data imported and restored!' });
+      setStatusMessage({ type: 'success', text: 'Habits & history restored! Your EXP stays as it is.' });
       setImportText('');
       setShowImportArea(false);
-      onDataReload();
     } else {
       setStatusMessage({ type: 'error', text: 'Invalid JSON backup format. Please check file.' });
     }
   };
 
   const handleReset = () => {
-    resetAllData();
+    onReset();
     setConfirmReset(false);
-    setStatusMessage({ type: 'success', text: 'Reset to default starter habits & EXP!' });
-    onDataReload();
+    setStatusMessage({ type: 'success', text: 'Reset to the starter habits with 0 EXP.' });
   };
 
   return (
@@ -72,14 +74,14 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
         <div className="flex items-center justify-between pb-4 border-b border-[#EDE6D8] dark:border-[#2C2825]">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-[#FFF5EB] dark:bg-[#261B12] border border-[#FADCC0] dark:border-[#FF7A00]/30 text-[#FF7A00] flex items-center justify-center shrink-0">
-              <HardDrive className="w-5 h-5" />
+              <Cloud className="w-5 h-5" />
             </div>
             <div>
               <h3 className="text-base font-bold font-['Outfit'] text-[#2C2C2C] dark:text-[#F5F2EB]">
-                Local Storage & Backup
+                Cloud Sync & Backup
               </h3>
               <p className="text-xs text-[#736C61] dark:text-[#A39B8F]">
-                Saved locally in your browser
+                Synced to your SquadGoals account
               </p>
             </div>
           </div>
@@ -127,7 +129,7 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
           <div className="flex items-center justify-between text-xs pt-1 border-t border-[#F2ECE1] dark:border-[#2C2825]">
             <span className="text-[#736C61] dark:text-[#A39B8F]">Storage Type:</span>
             <span className="font-semibold text-[#10B981] flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-[#10B981]" /> Browser LocalStorage
+              <span className="w-2 h-2 rounded-full bg-[#10B981]" /> Supabase Cloud
             </span>
           </div>
         </div>
@@ -156,7 +158,7 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
                 value={importText}
                 onChange={(e) => setImportText(e.target.value)}
                 rows={3}
-                placeholder="Paste your JSON backup data here..."
+                placeholder="Paste your JSON backup data here... (restores habits & history; EXP stays tied to your account)"
                 className="w-full p-2 text-xs rounded-lg bg-[#FDFBF7] dark:bg-[#1A1816] border border-[#EDE6D8] dark:border-[#332E2A] font-mono text-[#2C2C2C] dark:text-[#F5F2EB] focus:outline-hidden focus:border-[#FF7A00]"
               />
               <button
@@ -174,7 +176,7 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
             {confirmReset ? (
               <div className="p-3 rounded-xl bg-[#FFEBEB] dark:bg-[#2D1618] border border-[#FFCCD0] dark:border-[#FF5757]/40 space-y-2">
                 <p className="text-xs font-bold text-[#FF5757]">
-                  Reset all habits, EXP & history back to starter squad?
+                  Reset all habits, history & EXP back to the starter pack? Your leaderboard EXP goes to 0.
                 </p>
                 <div className="flex gap-2">
                   <button

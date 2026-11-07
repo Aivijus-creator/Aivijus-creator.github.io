@@ -3,6 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      ===== SquadGoals ⇄ Supabase connection =====
+      Paste your project's values below (Supabase Dashboard → Project Settings → API):
+        supabaseUrl     → "Project URL", e.g. https://abcd1234.supabase.co
+        supabaseAnonKey → the "anon" / "publishable" key
+      The anon key is meant to be public: Row Level Security (supabase/schema.sql) protects the data.
+      NEVER paste the service_role / secret key here.
+    -->
+    <script>
+      window.SQUADGOALS_CONFIG = {
+        supabaseUrl: "",
+        supabaseAnonKey: ""
+      };
+    </script>
     <title>SquadGoals - Personal Daily Habit Tracker</title>
     <meta name="description" content="Warm and cozy personal daily habit tracker with real-time progress bars, streak tracking, habit management, and local storage." />
     <meta property="og:title" content="SquadGoals - Personal Daily Habit Tracker" />

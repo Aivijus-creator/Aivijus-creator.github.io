@@ -1,5 +1,4 @@
 import { Habit, CompletionRecord } from '../types';
-import { formatDateKey } from './date';
 
 const HABITS_STORAGE_KEY = 'squadgoals_habits_v1';
 const HISTORY_STORAGE_KEY = 'squadgoals_history_v1';
@@ -11,11 +10,6 @@ export interface UserSettings {
   confettiEnabled: boolean;
   darkMode: boolean;
   userName: string;
-}
-
-export interface GamificationState {
-  totalExp: number;
-  dailyBonusDates: string[];
 }
 
 export const DEFAULT_HABITS: Habit[] = [
@@ -71,74 +65,6 @@ export const DEFAULT_HABITS: Habit[] = [
   },
 ];
 
-export function getInitialHistory(): CompletionRecord {
-  const history: CompletionRecord = {};
-  const today = new Date();
-
-  // Seed completions for previous 3 days to provide a nice initial 3-day streak feeling!
-  for (let i = 3; i >= 1; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const dateKey = formatDateKey(d);
-    // 3 or 4 habits completed on those days
-    history[dateKey] = ['habit-water', 'habit-workout', 'habit-read'];
-    if (i === 2) {
-      history[dateKey].push('habit-focus');
-    }
-  }
-
-  // Today starts with 1 habit already checked to encourage completion
-  const todayKey = formatDateKey(today);
-  history[todayKey] = ['habit-water'];
-
-  return history;
-}
-
-export function loadHabits(): Habit[] {
-  try {
-    const stored = localStorage.getItem(HABITS_STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
-      }
-    }
-  } catch (e) {
-    console.error('Failed to load habits from localStorage', e);
-  }
-  return DEFAULT_HABITS;
-}
-
-export function saveHabits(habits: Habit[]): void {
-  try {
-    localStorage.setItem(HABITS_STORAGE_KEY, JSON.stringify(habits));
-  } catch (e) {
-    console.error('Failed to save habits to localStorage', e);
-  }
-}
-
-export function loadHistory(): CompletionRecord {
-  try {
-    const stored = localStorage.getItem(HISTORY_STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch (e) {
-    console.error('Failed to load history from localStorage', e);
-  }
-  const initial = getInitialHistory();
-  saveHistory(initial);
-  return initial;
-}
-
-export function saveHistory(history: CompletionRecord): void {
-  try {
-    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
-  } catch (e) {
-    console.error('Failed to save history to localStorage', e);
-  }
-}
-
 export function loadSettings(): UserSettings {
   const defaultSettings: UserSettings = {
     soundEnabled: true,
@@ -165,75 +91,114 @@ export function saveSettings(settings: UserSettings): void {
   }
 }
 
-export function loadGamification(): GamificationState {
-  const defaultGamification: GamificationState = {
-    // Starts at Level 1 with 40 / 60 EXP so completing just 1 habit (+20 EXP) triggers the first Level-Up!
-    totalExp: 40,
-    dailyBonusDates: [],
-  };
-  try {
-    const stored = localStorage.getItem(GAMIFICATION_STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      return {
-        totalExp: typeof parsed.totalExp === 'number' ? Math.max(0, parsed.totalExp) : 40,
-        dailyBonusDates: Array.isArray(parsed.dailyBonusDates) ? parsed.dailyBonusDates : [],
-      };
+/* ------------------------------------------------------------------ */
+/* Account data                                                        */
+/* Habits, history and EXP now live in the signed-in user's Supabase   */
+/* row. Device preferences (sound, dark mode) stay in localStorage.    */
+/* ------------------------------------------------------------------ */
+
+export interface AccountData {
+  habits: Habit[];
+  history: CompletionRecord;
+  /** Raw gamification object; validated with normalizeGamification(). */
+  gamification: unknown;
+  /** Server timestamp of the saved row, used to detect saves from another device. */
+  updatedAt?: string | null;
+}
+
+export function sanitizeHabits(raw: unknown): Habit[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(
+    (h): h is Habit =>
+      !!h && typeof h === 'object' && typeof (h as Habit).id === 'string' && typeof (h as Habit).name === 'string'
+  );
+}
+
+export function sanitizeHistory(raw: unknown): CompletionRecord {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  const out: CompletionRecord = {};
+  for (const [date, ids] of Object.entries(raw as Record<string, unknown>)) {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date) && Array.isArray(ids)) {
+      out[date] = ids.filter((id): id is string => typeof id === 'string');
     }
-  } catch (e) {
-    console.error('Failed to load gamification state', e);
   }
-  return defaultGamification;
+  return out;
 }
 
-export function saveGamification(state: GamificationState): void {
-  try {
-    localStorage.setItem(GAMIFICATION_STORAGE_KEY, JSON.stringify(state));
-  } catch (e) {
-    console.error('Failed to save gamification state', e);
-  }
-}
-
-export function exportBackupJSON(): string {
-  const habits = loadHabits();
-  const history = loadHistory();
-  const settings = loadSettings();
-  const gamification = loadGamification();
-  const backup = {
-    app: 'SquadGoals',
-    version: '1.1',
-    exportedAt: new Date().toISOString(),
-    habits,
-    history,
-    settings,
-    gamification,
+/** Starting point for a brand-new account: starter habits, no history, 0 EXP. */
+export function starterAccountData(): AccountData {
+  const now = new Date().toISOString();
+  return {
+    habits: DEFAULT_HABITS.map((h) => ({ ...h, createdAt: now })),
+    history: {},
+    gamification: null,
   };
-  return JSON.stringify(backup, null, 2);
 }
 
-export function importBackupJSON(jsonStr: string): boolean {
+/**
+ * Progress saved by the earlier, sign-in-free version of the app (if any).
+ * It is moved into the first account that signs in on this browser.
+ */
+export function readGuestData(): AccountData | null {
+  try {
+    const habits = localStorage.getItem(HABITS_STORAGE_KEY);
+    const history = localStorage.getItem(HISTORY_STORAGE_KEY);
+    const gamification = localStorage.getItem(GAMIFICATION_STORAGE_KEY);
+    if (!habits && !history && !gamification) return null;
+    const parsedHabits = sanitizeHabits(habits ? JSON.parse(habits) : null);
+    return {
+      habits: parsedHabits.length > 0 ? parsedHabits : starterAccountData().habits,
+      history: sanitizeHistory(history ? JSON.parse(history) : null),
+      gamification: gamification ? JSON.parse(gamification) : null,
+    };
+  } catch (e) {
+    console.error('Failed to read guest data', e);
+    return null;
+  }
+}
+
+export function clearGuestData(): void {
+  try {
+    localStorage.removeItem(HABITS_STORAGE_KEY);
+    localStorage.removeItem(HISTORY_STORAGE_KEY);
+    localStorage.removeItem(GAMIFICATION_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function buildBackupJSON(data: {
+  habits: Habit[];
+  history: CompletionRecord;
+  gamification: unknown;
+}): string {
+  return JSON.stringify(
+    {
+      app: 'SquadGoals',
+      version: '2.0',
+      exportedAt: new Date().toISOString(),
+      habits: data.habits,
+      history: data.history,
+      settings: loadSettings(),
+      gamification: data.gamification,
+    },
+    null,
+    2
+  );
+}
+
+/** Parses a backup file. Returns habits + history, or null if invalid. */
+export function parseBackupJSON(
+  jsonStr: string
+): { habits: Habit[]; history: CompletionRecord } | null {
   try {
     const parsed = JSON.parse(jsonStr);
-    if (parsed.habits && Array.isArray(parsed.habits) && parsed.history) {
-      saveHabits(parsed.habits);
-      saveHistory(parsed.history);
-      if (parsed.settings) {
-        saveSettings(parsed.settings);
-      }
-      if (parsed.gamification) {
-        saveGamification(parsed.gamification);
-      }
-      return true;
+    const habits = sanitizeHabits(parsed?.habits);
+    if (habits.length > 0 && parsed.history && typeof parsed.history === 'object') {
+      return { habits, history: sanitizeHistory(parsed.history) };
     }
   } catch (e) {
     console.error('Error importing backup JSON', e);
   }
-  return false;
-}
-
-export function resetAllData(): void {
-  localStorage.removeItem(HABITS_STORAGE_KEY);
-  localStorage.removeItem(HISTORY_STORAGE_KEY);
-  localStorage.removeItem(SETTINGS_STORAGE_KEY);
-  localStorage.removeItem(GAMIFICATION_STORAGE_KEY);
+  return null;
 }

@@ -15,6 +15,8 @@ interface HabitChecklistProps {
   todayStr: string;
   isToday: boolean;
   historyMap: Record<string, string[]>;
+  /** Habits that already paid out their EXP today. */
+  claimedHabitIds: string[];
 }
 
 const CATEGORIES: { id: 'all' | HabitCategory; label: string }[] = [
@@ -37,6 +39,7 @@ export const HabitChecklist: React.FC<HabitChecklistProps> = ({
   todayStr,
   isToday,
   historyMap,
+  claimedHabitIds,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<'all' | HabitCategory>('all');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -89,7 +92,7 @@ export const HabitChecklist: React.FC<HabitChecklistProps> = ({
           </div>
           <p className="text-xs text-[#736C61] dark:text-[#A69E93] mt-0.5">
             {isToday
-              ? 'Earn +20 EXP per habit (+100 EXP full-day bonus) — editable today until 00:00 midnight'
+              ? 'Earn +20 EXP per habit once a day (+100 EXP full-day bonus) — editable today until 00:00 midnight'
               : `Viewing ${selectedDateFormatted} — past records are permanently locked and read-only`}
           </p>
         </div>
@@ -197,6 +200,7 @@ export const HabitChecklist: React.FC<HabitChecklistProps> = ({
           >
             {filteredHabits.map((habit) => {
               const isCompleted = completedHabitIds.includes(habit.id);
+              const isClaimed = isToday && claimedHabitIds.includes(habit.id);
               const streak = getHabitStreak(habit.id);
               const isDeleting = confirmDeleteId === habit.id;
 
@@ -228,7 +232,9 @@ export const HabitChecklist: React.FC<HabitChecklistProps> = ({
                         isPastLocked
                           ? `Locked: Past days (${selectedDateFormatted}) are permanently read-only`
                           : isCompleted
-                          ? `Checked for today (+20 EXP) — click to uncheck if clicked by mistake`
+                          ? `Checked for today — unchecking a misclick won't remove your EXP`
+                          : isClaimed
+                          ? `Re-check ${habit.name} (EXP already claimed today)`
                           : `Mark ${habit.name} as complete (+20 EXP)`
                       }
                       aria-label={
@@ -338,21 +344,32 @@ export const HabitChecklist: React.FC<HabitChecklistProps> = ({
 
                       <div className="flex items-center gap-2 text-xs text-[#736C61] dark:text-[#A69E93] mt-0.5 truncate">
                         {habit.description && (
-                          <span className="truncate">{habit.description}</span>
+                          <span className="truncate hidden sm:inline">{habit.description}</span>
                         )}
-                        {habit.description && <span aria-hidden="true">·</span>}
+                        {habit.description && <span aria-hidden="true" className="hidden sm:inline">·</span>}
                         <span className="capitalize">{habit.category}</span>
                         {!isPastLocked && (
                           <>
                             <span aria-hidden="true">·</span>
                             <span
-                              className={`font-semibold tabular-nums ${
+                              className={`font-semibold tabular-nums whitespace-nowrap ${
                                 isCompleted
                                   ? 'text-[#FF7A00]'
                                   : 'text-[#9B9386] dark:text-[#8C8479]'
                               }`}
                             >
-                              {isCompleted ? '+20 EXP Earned' : '+20 EXP'}
+                              {isCompleted && isClaimed ? (
+                                <>
+                                  +20 EXP<span className="hidden sm:inline"> Earned</span>
+                                </>
+                              ) : isClaimed ? (
+                                <>
+                                  <span className="sm:hidden">Claimed</span>
+                                  <span className="hidden sm:inline">EXP claimed today</span>
+                                </>
+                              ) : (
+                                '+20 EXP'
+                              )}
                             </span>
                           </>
                         )}

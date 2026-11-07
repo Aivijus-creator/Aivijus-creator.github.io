@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Sparkles,
@@ -7,19 +8,17 @@ import {
   CheckSquare,
   Lock,
   X,
+  CloudOff,
 } from 'lucide-react';
 import { Habit, CompletionRecord } from './types';
 import {
-  loadHabits,
-  saveHabits,
-  loadHistory,
-  saveHistory,
   loadSettings,
   saveSettings,
-  loadGamification,
-  saveGamification,
   UserSettings,
-  GamificationState,
+  AccountData,
+  starterAccountData,
+  buildBackupJSON,
+  parseBackupJSON,
 } from './utils/storage';
 import {
   formatDateKey,
@@ -37,7 +36,13 @@ import {
   EXP_PER_HABIT,
   DAILY_ALL_DONE_BONUS_EXP,
   getLevelProgress,
+  GamificationState,
+  claimHabitCheck,
+  getTodayExp,
+  normalizeGamification,
+  rollToDate,
 } from './utils/gamification';
+import { Account, fetchProgressIfNewer, saveProfile, saveProgress } from './lib/cloud';
 
 import { Header } from './components/Header';
 import { QuoteBanner } from './components/QuoteBanner';
@@ -49,16 +54,28 @@ import { HabitModal } from './components/HabitModal';
 import { DataBackupModal } from './components/DataBackupModal';
 import { InsightsView } from './components/InsightsView';
 import { LevelUpModal } from './components/LevelUpModal';
+import { Leaderboard } from './components/Leaderboard';
 
-const LAST_ACTIVE_DATE_KEY = 'squadgoals_last_active_date_v1';
+const LAST_ACTIVE_DATE_KEY_PREFIX = 'squadgoals_last_active_date_v1';
+const SAVE_DEBOUNCE_MS = 600;
+const SAVE_RETRY_MS = 10000;
 
-export default function App() {
-  // Core State
-  const [habits, setHabits] = useState<Habit[]>(() => loadHabits());
-  const [history, setHistory] = useState<CompletionRecord>(() => loadHistory());
+interface AppProps {
+  supabase: SupabaseClient;
+  account: Account;
+  initialData: AccountData;
+  onSignedOut: () => Promise<void> | void;
+}
+
+export default function App({ supabase, account, initialData, onSignedOut }: AppProps) {
+  const LAST_ACTIVE_DATE_KEY = `${LAST_ACTIVE_DATE_KEY_PREFIX}:${account.userId}`;
+
+  // Core State (loaded from the signed-in user's Supabase row)
+  const [habits, setHabits] = useState<Habit[]>(() => initialData.habits);
+  const [history, setHistory] = useState<CompletionRecord>(() => initialData.history);
   const [settings, setSettings] = useState<UserSettings>(() => loadSettings());
   const [gamification, setGamification] = useState<GamificationState>(() =>
-    loadGamification()
+    normalizeGamification(initialData.gamification, initialData.history, formatDateKey(new Date()))
   );
   const [todayStr, setTodayStr] = useState<string>(() => formatDateKey(new Date()));
   const [selectedDate, setSelectedDate] = useState<string>(() => formatDateKey(new Date()));
@@ -85,23 +102,151 @@ export default function App() {
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
 
-  // Sync state to LocalStorage
-  useEffect(() => {
-    saveHabits(habits);
-  }, [habits]);
+  const [syncState, setSyncState] = useState<'saving' | 'saved' | 'error'>('saved');
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
-  useEffect(() => {
-    saveHistory(history);
-  }, [history]);
-
+  // Device preferences stay in this browser
   useEffect(() => {
     saveSettings(settings);
     document.documentElement.classList.toggle('dark', settings.darkMode);
   }, [settings]);
 
+  /* ---------------- Cloud sync (Supabase) ----------------
+   * Progress (habits, history, EXP state) is saved to the private user_progress row.
+   * The public leaderboard row (profiles) is updated only when the EXP numbers change.
+   * Saves are debounced and run one at a time, always sending the latest state. */
+  const latestRef = useRef({ habits, history, gamification, todayStr: formatDateKey(new Date()) });
+  const saveChainRef = useRef<Promise<void>>(Promise.resolve());
+  const saveTimerRef = useRef<number | null>(null);
+  const lastProfileJsonRef = useRef('');
+  const knownUpdatedAtRef = useRef<string | null>(initialData.updatedAt ?? null);
+  const inFlightRef = useRef(0);
+  const adoptedRef = useRef<{ habits: Habit[]; history: CompletionRecord; gamification: GamificationState } | null>(
+    null
+  );
+  const pullingRef = useRef(false);
+
+  const runSync = useCallback((): Promise<boolean> => {
+    if (saveTimerRef.current) {
+      window.clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    setSyncState('saving');
+    inFlightRef.current += 1;
+    const run = saveChainRef.current.then(async () => {
+      const snap = latestRef.current;
+      try {
+        knownUpdatedAtRef.current = await saveProgress(supabase, account.userId, snap);
+        const stats = {
+          totalExp: snap.gamification.totalExp,
+          todayExp: getTodayExp(snap.gamification, snap.todayStr),
+          expDate: snap.todayStr,
+        };
+        const json = JSON.stringify(stats);
+        if (json !== lastProfileJsonRef.current) {
+          await saveProfile(supabase, account, stats);
+          lastProfileJsonRef.current = json;
+        }
+        setSyncState('saved');
+        return true;
+      } catch (e) {
+        console.error('Cloud save failed', e);
+        setSyncState('error');
+        return false;
+      } finally {
+        inFlightRef.current -= 1;
+      }
+    });
+    saveChainRef.current = run.then(() => undefined);
+    return run;
+  }, [supabase, account]);
+
+  latestRef.current = { habits, history, gamification, todayStr };
+
+  // Debounced save whenever progress changes (and once on load, so the
+  // leaderboard row is current for today).
   useEffect(() => {
-    saveGamification(gamification);
-  }, [gamification]);
+    const adopted = adoptedRef.current;
+    if (
+      adopted &&
+      adopted.habits === habits &&
+      adopted.history === history &&
+      adopted.gamification === gamification
+    ) {
+      // State was just replaced by a newer save from another device: nothing to write back.
+      return;
+    }
+    if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = window.setTimeout(() => {
+      saveTimerRef.current = null;
+      void runSync();
+    }, SAVE_DEBOUNCE_MS);
+  }, [habits, history, gamification, todayStr, runSync]);
+
+  // When this tab comes back into view, pick up progress saved on another
+  // device in the meantime (so a stale tab never overwrites newer EXP).
+  useEffect(() => {
+    const pullIfNewer = async () => {
+      if (document.visibilityState !== 'visible') return;
+      if (pullingRef.current || saveTimerRef.current || inFlightRef.current > 0) return;
+      pullingRef.current = true;
+      try {
+        const remote = await fetchProgressIfNewer(supabase, account.userId, knownUpdatedAtRef.current);
+        if (!remote || saveTimerRef.current || inFlightRef.current > 0) return;
+        const today = formatDateKey(new Date());
+        const adopted = {
+          habits: remote.habits,
+          history: remote.history,
+          gamification: normalizeGamification(remote.gamification, remote.history, today),
+        };
+        knownUpdatedAtRef.current = remote.updatedAt ?? null;
+        adoptedRef.current = adopted;
+        setHabits(adopted.habits);
+        setHistory(adopted.history);
+        setGamification(adopted.gamification);
+      } catch (e) {
+        console.warn('Could not check for newer progress', e);
+      } finally {
+        pullingRef.current = false;
+      }
+    };
+    document.addEventListener('visibilitychange', pullIfNewer);
+    window.addEventListener('focus', pullIfNewer);
+    return () => {
+      document.removeEventListener('visibilitychange', pullIfNewer);
+      window.removeEventListener('focus', pullIfNewer);
+    };
+  }, [supabase, account.userId]);
+
+  // Retry failed saves, and flush pending ones when the tab is hidden.
+  useEffect(() => {
+    if (syncState !== 'error') return;
+    const retry = window.setTimeout(() => void runSync(), SAVE_RETRY_MS);
+    const onOnline = () => void runSync();
+    window.addEventListener('online', onOnline);
+    return () => {
+      window.clearTimeout(retry);
+      window.removeEventListener('online', onOnline);
+    };
+  }, [syncState, runSync]);
+
+  useEffect(() => {
+    const flushIfPending = () => {
+      if (document.visibilityState === 'hidden' && saveTimerRef.current) void runSync();
+    };
+    const warnIfUnsaved = (e: BeforeUnloadEvent) => {
+      if (saveTimerRef.current) {
+        void runSync();
+        e.preventDefault();
+      }
+    };
+    document.addEventListener('visibilitychange', flushIfPending);
+    window.addEventListener('beforeunload', warnIfUnsaved);
+    return () => {
+      document.removeEventListener('visibilitychange', flushIfPending);
+      window.removeEventListener('beforeunload', warnIfUnsaved);
+    };
+  }, [runSync]);
 
   // Clear floating +EXP toast after 2.2 seconds
   useEffect(() => {
@@ -200,6 +345,9 @@ export default function App() {
   );
 
   // Rule 1 & 2 + Gamification EXP Progression
+  // - Each habit pays EXP once per calendar day, on its first check.
+  // - Unchecking (misclick protection) never removes EXP or levels.
+  // - Re-checking a habit that already paid today adds nothing.
   const handleToggleHabit = useCallback(
     (habitId: string) => {
       // Rule 2: Permanent Past-Day Locking — never allow altering past dates
@@ -209,92 +357,54 @@ export default function App() {
 
       const currentList = history[selectedDate] || [];
       const isAlreadyCompleted = currentList.includes(habitId);
+      const updatedList = isAlreadyCompleted
+        ? currentList.filter((id) => id !== habitId)
+        : [...currentList, habitId];
 
-      let updatedList: string[];
-      if (isAlreadyCompleted) {
-        updatedList = currentList.filter((id) => id !== habitId);
-      } else {
-        updatedList = [...currentList, habitId];
-      }
-
-      // Update History state
       setHistory((prev) => ({
         ...prev,
         [selectedDate]: updatedList,
       }));
 
-      // Calculate Gamification EXP Delta
-      const allHabitsNowDone =
-        habits.length > 0 &&
-        habits.every((h) => updatedList.includes(h.id));
-      const hadDailyBonusForToday =
-        gamification.dailyBonusDates.includes(todayStr);
-
-      let expDelta = 0;
-      let updatedBonusDates = [...gamification.dailyBonusDates];
-      let toastLabel: string | undefined;
-
-      if (!isAlreadyCompleted) {
-        // Habit checked: +20 EXP
-        expDelta += EXP_PER_HABIT;
-        if (allHabitsNowDone && !hadDailyBonusForToday) {
-          expDelta += DAILY_ALL_DONE_BONUS_EXP;
-          updatedBonusDates.push(todayStr);
-          toastLabel = 'Daily Sweep Bonus!';
-        }
-      } else {
-        // Habit unchecked on current day (misclick protection): revert +20 EXP
-        expDelta -= EXP_PER_HABIT;
-        if (!allHabitsNowDone && hadDailyBonusForToday) {
-          expDelta -= DAILY_ALL_DONE_BONUS_EXP;
-          updatedBonusDates = updatedBonusDates.filter((d) => d !== todayStr);
-        }
+      if (isAlreadyCompleted) {
+        // Unchecked: EXP and level stay exactly as they are.
+        if (settings.soundEnabled) playUncheckSound();
+        return;
       }
 
-      const prevTotalExp = gamification.totalExp;
-      const newTotalExp = Math.max(0, prevTotalExp + expDelta);
-      const prevLevel = getLevelProgress(prevTotalExp).level;
-      const newLevel = getLevelProgress(newTotalExp).level;
+      const allHabitsNowDone =
+        habits.length > 0 && habits.every((h) => updatedList.includes(h.id));
+      const result = claimHabitCheck(gamification, habitId, todayStr, allHabitsNowDone);
 
-      setGamification({
-        totalExp: newTotalExp,
-        dailyBonusDates: updatedBonusDates,
+      if (result.state !== gamification) {
+        setGamification(result.state);
+      }
+
+      setRecentExpGain({
+        id: Date.now(),
+        amount: result.expGained,
+        label:
+          result.bonusExp > 0
+            ? 'Daily Sweep Bonus!'
+            : result.alreadyClaimed
+            ? 'Already claimed today'
+            : undefined,
       });
 
-      if (expDelta > 0) {
-        setRecentExpGain({
-          id: Date.now(),
-          amount: expDelta,
-          label: toastLabel,
-        });
-      }
-
-      // Check if user crossed a level threshold
+      const prevLevel = getLevelProgress(gamification.totalExp).level;
+      const newLevel = getLevelProgress(result.state.totalExp).level;
       if (newLevel > prevLevel) {
         setLevelUpData({
           previousLevel: prevLevel,
           newLevel,
-          totalExp: newTotalExp,
+          totalExp: result.state.totalExp,
         });
-        if (settings.soundEnabled) {
-          playLevelUpSound();
-        }
+        if (settings.soundEnabled) playLevelUpSound();
       } else if (settings.soundEnabled) {
-        if (isAlreadyCompleted) {
-          playUncheckSound();
-        } else {
-          playCheckSound();
-        }
+        playCheckSound();
       }
     },
-    [
-      selectedDate,
-      todayStr,
-      history,
-      habits,
-      gamification,
-      settings.soundEnabled,
-    ]
+    [selectedDate, todayStr, history, habits, gamification, settings.soundEnabled]
   );
 
   // Add or Edit Habit
@@ -344,18 +454,47 @@ export default function App() {
     }));
   };
 
-  // Data reload from backup or reset
-  const handleDataReload = () => {
-    setHabits(loadHabits());
-    setHistory(loadHistory());
-    setSettings(loadSettings());
-    setGamification(loadGamification());
+  // Backup: export current account data
+  const handleExportBackup = () => buildBackupJSON({ habits, history, gamification });
+
+  // Backup: restore habits & history. EXP stays tied to the account, so an
+  // imported file cannot inflate the leaderboard.
+  const handleImportBackup = (json: string): boolean => {
+    const parsed = parseBackupJSON(json);
+    if (!parsed) return false;
+    setHabits(parsed.habits);
+    setHistory(parsed.history);
+    return true;
   };
+
+  // Reset to starter habits with 0 EXP. Today's claims are kept, so starter
+  // habits re-checked today do not pay out a second time.
+  const handleResetData = () => {
+    const starter = starterAccountData();
+    setHabits(starter.habits);
+    setHistory({});
+    setGamification((prev) => ({ ...rollToDate(prev, todayStr), totalExp: 0, todayExp: 0 }));
+  };
+
+  const handleSignOut = async () => {
+    if (isSigningOut) return;
+    setIsSigningOut(true);
+    const saved = await runSync();
+    if (!saved && !window.confirm('Some changes have not been saved to the cloud yet. Log out anyway?')) {
+      setIsSigningOut(false);
+      return;
+    }
+    await onSignedOut();
+  };
+
+  const todayExp = getTodayExp(gamification, todayStr);
+  const claimedHabitIdsToday = gamification.claimDate === todayStr ? gamification.claimedHabitIds : [];
+  const bonusClaimedToday = gamification.dailyBonusDates.includes(todayStr);
 
   return (
     <div
       id="top"
-      className="min-h-screen bg-[#FDFBF7] dark:bg-[#11100F] text-[#2C2C2C] dark:text-[#F5F2EB] flex flex-col font-sans pb-20 sm:pb-12 transition-colors duration-300"
+      className="min-h-screen bg-[#FDFBF7] dark:bg-[#11100F] text-[#2C2C2C] dark:text-[#F5F2EB] flex flex-col font-sans pb-20 lg:pb-12 transition-colors duration-300"
     >
       {/* Top Bar with Level & EXP Header Bar and Dark Mode Toggle */}
       <Header
@@ -372,11 +511,41 @@ export default function App() {
         onChangeView={setActiveView}
         levelProgress={levelProgress}
         recentExpGain={recentExpGain}
+        account={account}
+        onSignOut={handleSignOut}
+        isSigningOut={isSigningOut}
       />
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
         {/* Automated Midnight Reset Notification Banner (if a 00:00 rollover occurred) */}
+        {/* Cloud save problem banner */}
+        <AnimatePresence>
+          {syncState === 'error' && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18 }}
+              role="status"
+              className="rounded-2xl bg-[#FFEBEB] dark:bg-[#2D1618] border border-[#FFCCD0] dark:border-[#FF5757]/30 px-4 py-3 flex items-center justify-between gap-3 text-xs text-[#D93D3D] dark:text-[#FF8A8A] shadow-sm"
+            >
+              <div className="flex items-center gap-2.5">
+                <CloudOff className="w-4 h-4 shrink-0" />
+                <span className="font-medium">
+                  Couldn’t save to the cloud. Your progress is safe on this page and will retry automatically.
+                </span>
+              </div>
+              <button
+                onClick={() => void runSync()}
+                className="font-bold underline shrink-0 cursor-pointer"
+              >
+                Retry now
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <AnimatePresence>
           {midnightResetNotice && (
             <motion.div
@@ -435,6 +604,7 @@ export default function App() {
                     totalCount={habits.length}
                     selectedDateFormatted={formatFriendlyDate(selectedDate)}
                     isToday={isSelectedDateToday}
+                    bonusClaimedToday={bonusClaimedToday}
                     onCelebrationSound={
                       settings.soundEnabled ? playCelebrationSound : undefined
                     }
@@ -458,11 +628,21 @@ export default function App() {
                     todayStr={todayStr}
                     isToday={isSelectedDateToday}
                     historyMap={history}
+                    claimedHabitIds={claimedHabitIdsToday}
                   />
                 </div>
 
                 {/* Right Column: Streak Widget & Quick Actions (5 cols on lg) */}
                 <div className="lg:col-span-5 space-y-6">
+                  {/* Shared Team Leaderboard (live via Supabase Realtime) */}
+                  <Leaderboard
+                    supabase={supabase}
+                    account={account}
+                    todayStr={todayStr}
+                    myTotalExp={gamification.totalExp}
+                    myTodayExp={todayExp}
+                  />
+
                   {/* Core Feature 3: Streak Counter Widget */}
                   <StreakWidget
                     stats={streakStats}
@@ -483,7 +663,7 @@ export default function App() {
                           Cozy Habit & EXP Formula
                         </h4>
                         <p className="text-[11px] text-[#736C61] dark:text-[#A39B8F]">
-                          +{EXP_PER_HABIT} EXP per check · +{DAILY_ALL_DONE_BONUS_EXP} EXP daily sweep
+                          +{EXP_PER_HABIT} EXP per habit, once a day · +{DAILY_ALL_DONE_BONUS_EXP} EXP daily sweep
                         </p>
                       </div>
                     </div>
@@ -494,6 +674,11 @@ export default function App() {
                       <span className="font-semibold text-[#2C2C2C] dark:text-[#F5F2EB]">
                         "After I pour my morning coffee, I will drink 1 full glass of water."
                       </span>
+                    </p>
+
+                    <p className="text-xs text-[#736C61] dark:text-[#A39B8F] leading-relaxed">
+                      Clicked by mistake? Unchecking never costs EXP, and
+                      re-checking the same habit won’t pay twice in one day.
                     </p>
 
                     <div className="flex items-center justify-between pt-2 border-t border-[#F2ECE1] dark:border-[#262320] text-xs">
@@ -536,7 +721,7 @@ export default function App() {
       </main>
 
       {/* Mobile Sticky Ergonomic Bottom Action Bar */}
-      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#1A1816]/95 backdrop-blur-md border-t border-[#EDE6D8] dark:border-[#2C2825] px-4 py-2 flex items-center justify-around shadow-lg transition-colors duration-300">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#1A1816]/95 backdrop-blur-md border-t border-[#EDE6D8] dark:border-[#2C2825] px-4 py-2 flex items-center justify-around shadow-lg transition-colors duration-300">
         <button
           onClick={() => setActiveView('tracker')}
           className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl min-h-[44px] transition-colors ${
@@ -591,10 +776,16 @@ export default function App() {
               onClick={() => setIsBackupModalOpen(true)}
               className="hover:text-[#2C2C2C] dark:hover:text-[#F5F2EB] transition-colors cursor-pointer"
             >
-              Storage & Backup
+              Backup & Reset
             </button>
             <span>·</span>
-            <span>Saved in Browser LocalStorage</span>
+            <span className="truncate max-w-[16rem]" title={account.email}>
+              {syncState === 'saving'
+                ? 'Saving…'
+                : syncState === 'error'
+                ? 'Not saved yet'
+                : `Synced to ${account.displayName}’s account`}
+            </span>
           </div>
         </div>
       </footer>
@@ -616,7 +807,9 @@ export default function App() {
         onClose={() => setIsBackupModalOpen(false)}
         habitsCount={habits.length}
         historyDaysCount={Object.keys(history).length}
-        onDataReload={handleDataReload}
+        onExport={handleExportBackup}
+        onImport={handleImportBackup}
+        onReset={handleResetData}
       />
 
       {/* Celebratory Level-Up Notification Popup */}

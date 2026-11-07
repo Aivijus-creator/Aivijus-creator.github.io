@@ -7,6 +7,8 @@ interface ProgressCardProps {
   totalCount: number;
   selectedDateFormatted: string;
   isToday: boolean;
+  /** The +100 full-day bonus was already paid today (it can't be earned twice). */
+  bonusClaimedToday?: boolean;
   onCelebrationSound?: () => void;
 }
 
@@ -15,6 +17,7 @@ export const ProgressCard: React.FC<ProgressCardProps> = ({
   totalCount,
   selectedDateFormatted,
   isToday,
+  bonusClaimedToday = false,
   onCelebrationSound,
 }) => {
   const percentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
@@ -189,7 +192,11 @@ export const ProgressCard: React.FC<ProgressCardProps> = ({
                 Full Day Bonus
               </p>
               <p className="text-sm font-bold text-[#2C2C2C] dark:text-[#F5F2EB] font-['Outfit'] truncate tabular-nums">
-                {percentage === 100 ? '+100 EXP Earned' : '+100 EXP at 100%'}
+                {isToday && bonusClaimedToday
+                  ? '+100 EXP Claimed'
+                  : percentage === 100
+                  ? '+100 EXP Earned'
+                  : '+100 EXP at 100%'}
               </p>
             </div>
           </div>

@@ -1,6 +1,6 @@
 {
   "name": "SquadGoals - Daily Habit Tracker",
-  "description": "Warm and cozy personal daily habit tracker with real-time progress bars, streak tracking, habit management, and local storage.",
+  "description": "Daily habit tracker with Supabase accounts, a live squad EXP leaderboard, streak tracking and habit management.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": []
 }
