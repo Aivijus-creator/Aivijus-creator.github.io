@@ -18,8 +18,8 @@ export function LineupWheel({ lineup }: { lineup: PlayerId[] }) {
         return (
           <g key={id} transform={`translate(${x} ${y})`}>
             <circle r={16} fill={b.bg} stroke={b.border ?? 'none'} strokeWidth={2} />
-            <text y={4.5} textAnchor="middle" fontFamily="Oswald, sans-serif" fontWeight={600} fontSize={12} fill={b.fg}>{t.code[id]}</text>
-            <text x={14} y={-11} fontSize={10} fontFamily="Oswald" fill="var(--muted)">{i + 1}</text>
+            <text y={4.5} textAnchor="middle" fontFamily="Manrope, sans-serif" fontWeight={600} fontSize={12} fill={b.fg}>{t.code[id]}</text>
+            <text x={14} y={-11} fontSize={10} fontFamily="Manrope" fill="var(--muted)">{i + 1}</text>
           </g>
         );
       })}

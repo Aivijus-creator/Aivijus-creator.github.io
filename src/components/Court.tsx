@@ -156,7 +156,7 @@ export function Court({ players, arrows = [], overlap = [], highlightZone, showZ
         {beach && <line x1={4} y1={0} x2={4} y2={8} stroke={line} strokeOpacity={0.4} strokeWidth={0.04} strokeDasharray="0.2 0.2" />}
         {!hideZones && !beach &&
           ([1, 2, 3, 4, 5, 6] as Zone[]).map((z) => (
-            <text key={z} x={ZONE_CENTER[z].x} y={z >= 2 && z <= 4 ? 2.5 : 8.4} textAnchor="middle" fontFamily="Oswald, sans-serif" fontWeight={700} fontSize={0.9}
+            <text key={z} x={ZONE_CENTER[z].x} y={z >= 2 && z <= 4 ? 2.5 : 8.4} textAnchor="middle" fontFamily="Manrope, sans-serif" fontWeight={700} fontSize={0.9}
               fill="var(--ink)" opacity={0.07}>{z}</text>
           ))}
         {/* court lines with a soft outline so they read on a light floor */}
@@ -187,7 +187,7 @@ export function Court({ players, arrows = [], overlap = [], highlightZone, showZ
               <line x1={o.a.x} y1={o.a.y} x2={o.b.x} y2={o.b.y} stroke={o.ok ? 'var(--ok)' : 'var(--bad)'} strokeWidth={o.focus ? 0.09 : 0.05} strokeLinecap="round" />
               <g transform={`translate(${(o.a.x + o.b.x) / 2} ${(o.a.y + o.b.y) / 2})`}>
                 <rect x={-0.34} y={-0.15} width={0.68} height={0.3} rx={0.15} fill={o.ok ? 'var(--ok)' : 'var(--bad)'} />
-                <text y={0.07} textAnchor="middle" fontSize={0.18} fontFamily="'Barlow Condensed', sans-serif" fontWeight={600} fill="#fff">{o.label}</text>
+                <text y={0.07} textAnchor="middle" fontSize={0.18} fontFamily="Manrope, sans-serif" fontWeight={600} fill="#fff">{o.label}</text>
               </g>
             </motion.g>
           ))}

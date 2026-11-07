@@ -104,7 +104,7 @@ export function Figure({ pose, label, labelSmall, badge, kind, zone, showZoneBad
               stroke={isLib ? '#B3122E' : faded ? 'none' : 'rgba(0,0,0,.18)'} strokeWidth={isLib ? 0.05 : 0.02} strokeLinejoin="round" />
             {isLib && <path d="M -0.17 -0.62 L 0.17 -0.62" stroke="#B3122E" strokeWidth={0.04} />}
             <circle cx={0} cy={-1.12} r={0.13} fill={body} />
-            <text x={0} y={-0.66} textAnchor="middle" fill={numColor} fontFamily="Oswald, sans-serif" fontWeight={700}
+            <text x={0} y={-0.66} textAnchor="middle" fill={numColor} fontFamily="Manrope, sans-serif" fontWeight={700}
               fontSize={labelSmall ? 0.13 : label.length > 2 ? 0.17 : 0.24}>{label}</text>
           </g>
         </motion.g>
@@ -112,13 +112,13 @@ export function Figure({ pose, label, labelSmall, badge, kind, zone, showZoneBad
       {showZoneBadge && (
         <g transform="translate(0.33 -1.02)">
           <circle r={0.14} fill="var(--white)" stroke="var(--ink)" strokeWidth={0.025} />
-          <text y={0.055} textAnchor="middle" fontFamily="Oswald, sans-serif" fontWeight={600} fontSize={0.16} fill="var(--ink)">{zone}</text>
+          <text y={0.055} textAnchor="middle" fontFamily="Manrope, sans-serif" fontWeight={600} fontSize={0.16} fill="var(--ink)">{zone}</text>
         </g>
       )}
       {!hideBadge && (
         <g transform="translate(0 0.3)">
           <rect x={-0.3} y={-0.13} width={0.6} height={0.26} rx={0.13} fill={rb.bg} stroke={rb.border ?? 'none'} strokeWidth={0.03} />
-          <text y={0.06} textAnchor="middle" fontFamily="'Barlow Condensed', sans-serif" fontWeight={600} fontSize={0.17} fill={rb.fg}>{badge}</text>
+          <text y={0.06} textAnchor="middle" fontFamily="Manrope, sans-serif" fontWeight={600} fontSize={0.17} fill={rb.fg}>{badge}</text>
         </g>
       )}
       {icon && (
