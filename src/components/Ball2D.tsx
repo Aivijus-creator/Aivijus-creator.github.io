@@ -1,14 +1,13 @@
 import { motion, useReducedMotion } from 'framer-motion';
 import { useId } from 'react';
 
-export type Ball2DDesign = 'molten' | 'beachPro';
+export type Ball2DDesign = 'molten';
 
-/** Shaded SVG ball (no logos). 'molten' = white/green/red indoor ball, 'beachPro' = yellow/blue swirl beach ball. */
-export function Ball2D({ r = 0.22, spinning = false, design = 'molten' }: { r?: number; spinning?: boolean; design?: Ball2DDesign }) {
+/** Shaded SVG ball (no logos): the white, green and red indoor ball. */
+export function Ball2D({ r = 0.22, spinning = false }: { r?: number; spinning?: boolean; design?: Ball2DDesign }) {
   const id = useId().replace(/:/g, '');
   const reduce = useReducedMotion();
-  const m = design === 'molten';
-  const base = m ? '#F4F3EE' : '#FFCF1A';
+  const base = '#F4F3EE';
   return (
     <g>
       <defs>
@@ -28,20 +27,9 @@ export function Ball2D({ r = 0.22, spinning = false, design = 'molten' }: { r?: 
           transition={spinning ? { duration: 0.6, repeat: Infinity, ease: 'linear' } : { duration: 0 }}
         >
           <g transform={`scale(${r})`} strokeLinecap="round">
-            {m ? (
-              <>
-                <path d="M -1.2 -0.55 C -0.5 -0.95 0.4 -0.9 1.2 -0.4 L 1.2 -0.08 C 0.4 -0.55 -0.5 -0.6 -1.2 -0.22 Z" fill="#0B8F4D" />
-                <path d="M -1.2 0.22 C -0.4 -0.12 0.4 -0.08 1.2 0.38 L 1.2 0.7 C 0.4 0.25 -0.4 0.2 -1.2 0.55 Z" fill="#D3202C" />
-                <path d="M 0.15 1.2 C 0.3 0.95 0.6 0.85 1.2 0.85" fill="none" stroke="#0B8F4D" strokeWidth={0.12} />
-              </>
-            ) : (
-              <>
-                <path d="M -1.2 -0.35 C -0.5 -0.75 0.4 -0.7 1.2 -0.2 L 1.2 0.18 C 0.4 -0.3 -0.5 -0.35 -1.2 0.05 Z" fill="#1B4FAE" />
-                <path d="M -1.2 -0.02 C -0.5 -0.4 0.4 -0.36 1.2 0.12" fill="none" stroke="#fff" strokeWidth={0.08} />
-                <path d="M -0.55 1.2 C -0.2 0.5 0.15 0.2 0.85 -0.15 L 1.2 0.5 C 0.6 0.6 0.25 0.9 0.05 1.3 Z" fill="#1B4FAE" />
-                <path d="M -0.4 1.2 C -0.1 0.6 0.2 0.35 0.9 0.02" fill="none" stroke="#D8262F" strokeWidth={0.06} />
-              </>
-            )}
+            <path d="M -1.2 -0.55 C -0.5 -0.95 0.4 -0.9 1.2 -0.4 L 1.2 -0.08 C 0.4 -0.55 -0.5 -0.6 -1.2 -0.22 Z" fill="#0B8F4D" />
+            <path d="M -1.2 0.22 C -0.4 -0.12 0.4 -0.08 1.2 0.38 L 1.2 0.7 C 0.4 0.25 -0.4 0.2 -1.2 0.55 Z" fill="#D3202C" />
+            <path d="M 0.15 1.2 C 0.3 0.95 0.6 0.85 1.2 0.85" fill="none" stroke="#0B8F4D" strokeWidth={0.12} />
             <g fill="none" stroke="rgba(0,0,0,.3)" strokeWidth={0.04}>
               <path d="M -1.2 -0.6 C -0.4 -1 0.5 -0.95 1.2 -0.45" />
               <path d="M -1.2 0.25 C -0.4 -0.1 0.4 -0.05 1.2 0.4" />

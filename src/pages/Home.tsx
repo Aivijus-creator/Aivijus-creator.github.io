@@ -126,7 +126,7 @@ export default function Home() {
           <div className="wrap">
             <div className="h-hero__c">
               {!wide && <div className="h-ball-sm"><BallStage design="molten" label={H.dragBall} /></div>}
-              <Link className="h-pill" to="/beach"><b>{H.pill}</b><span>{H.pillMore}</span></Link>
+              <Link className="h-pill" to="/compare"><b>{H.pill}</b><span>{H.pillMore}</span></Link>
               <h1 id="hero-h">{H.title}</h1>
               <p className="lead">{H.lead}</p>
               <div className="btn-row">

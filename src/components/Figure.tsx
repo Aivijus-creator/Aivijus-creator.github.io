@@ -54,7 +54,7 @@ export interface FigureProps {
   selected?: boolean;
   highlight?: boolean;
   faded?: boolean;
-  jersey?: string; // color override (beach)
+  jersey?: string; // shirt colour override
   hideBadge?: boolean;
   lean?: number;
 }

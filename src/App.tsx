@@ -10,8 +10,10 @@ import SystemPage from './pages/SystemPage';
 import Compare from './pages/Compare';
 import Sandbox from './pages/Sandbox';
 import Quiz from './pages/Quiz';
-import Beach from './pages/Beach';
-import type { SystemId } from './data/types';
+import { withGone } from './pages/SystemPage';
+import { SYSTEMS } from './data/systems';
+import { DEFAULT_META, toCourtPlayer } from './components/view';
+import type { PlayerId, SystemId } from './data/types';
 
 const SYS: SystemId[] = ['5-1', '6-2', '4-2'];
 const Chev = () => (
@@ -20,7 +22,17 @@ const Chev = () => (
   </svg>
 );
 
-function Header({ lastIndoor }: { lastIndoor: string }) {
+/** 5-1, rotation 1, serve receive: the picture on the rules card in the menu. */
+function RulesCourt() {
+  const { t } = useT();
+  const S = SYSTEMS['5-1'];
+  const all: PlayerId[] = [...S.lineup, 'L'];
+  const players = withGone(S.formation(0, 'receive'), all, S.lineup, 0)
+    .map((p) => toCourtPlayer(p, { t, sys: '5-1', k: 0, phase: 'receive', labelMode: 'role', meta: DEFAULT_META, showIcons: false }));
+  return <Court players={players} showZoneBadge={false} ariaLabel={t.rules.title} />;
+}
+
+function Header() {
   const { t, lang, setLang } = useT();
   const loc = useLocation();
   const [open, setOpen] = useState(false);
@@ -30,7 +42,6 @@ function Header({ lastIndoor }: { lastIndoor: string }) {
     document.body.style.overflow = open ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [open]);
-  const isBeach = loc.pathname.startsWith('/beach');
   const onSystem = SYS.some((s) => loc.pathname === `/${s}`);
   const tools: [string, string, string][] = [
     ['/sandbox', t.nav.sandbox, t.nav.desc.sandbox],
@@ -68,25 +79,17 @@ function Header({ lastIndoor }: { lastIndoor: string }) {
                     <Link key={to} to={to}>{l}<span>{d}</span></Link>
                   ))}
                 </div>
-                <Link className="menu-card" to={isBeach ? lastIndoor : '/beach'}>
-                  <div className="menu-card__pic" data-theme-scope={isBeach ? undefined : 'beach'}>
-                    <Court players={[]} beach={!isBeach} hideZones ariaLabel={isBeach ? t.nav.indoor : t.nav.beach} />
-                  </div>
-                  <b>{isBeach ? t.nav.indoor : t.home.pill}</b>
-                  <span>{isBeach ? t.nav.desc.indoor : t.nav.desc.beach}</span>
+                <Link className="menu-card" to="/rules">
+                  <div className="menu-card__pic"><RulesCourt /></div>
+                  <b>{t.rules.title}</b>
+                  <span>{t.nav.desc.rules}</span>
                 </Link>
               </div>
             </div>
           </div>
           <div className="nav__item"><NavLink to="/rules" className="nav__link">{t.nav.rules}</NavLink></div>
           <div className="nav__item"><NavLink to="/quiz" className="nav__link">{t.nav.quiz}</NavLink></div>
-          <div className="nav__item">
-            {isBeach ? (
-              <Link to={lastIndoor} className="nav__link nav__mode">{t.nav.indoor}</Link>
-            ) : (
-              <NavLink to="/beach" className="nav__link">{t.nav.beach}</NavLink>
-            )}
-          </div>
+          <div className="nav__item"><NavLink to="/compare" className="nav__link">{t.nav.compare}</NavLink></div>
         </nav>
         <div className="header__actions">
           {Lang}
@@ -106,11 +109,6 @@ function Header({ lastIndoor }: { lastIndoor: string }) {
             {SYS.map((s) => <NavLink key={s} to={`/${s}`}>{s}<span>{t.nav.desc[s]}</span></NavLink>)}
             <NavLink to="/rules">{t.nav.rules}</NavLink>
             {tools.map(([to, l, d]) => <NavLink key={to} to={to}>{l}<span>{d}</span></NavLink>)}
-            {isBeach ? (
-              <Link to={lastIndoor} className="mobile-menu__mode">{t.nav.indoor}<span>{t.nav.desc.indoor}</span></Link>
-            ) : (
-              <NavLink to="/beach" className="mobile-menu__mode">{t.nav.beach}<span>{t.nav.desc.beach}</span></NavLink>
-            )}
             <Link className="btn btn--xl" to="/5-1">{t.home.cta}</Link>
           </motion.nav>
         )}
@@ -146,21 +144,19 @@ function Footer() {
             <ul>
               <li><Link to="/rules">{t.nav.rules}</Link></li>
               <li><Link to="/quiz">{t.nav.quiz}</Link></li>
-              <li><Link to="/compare">{t.nav.compare}</Link></li>
-              <li><Link to="/sandbox">{t.nav.sandbox}</Link></li>
             </ul>
           </div>
           <div className="footer__col">
-            <h4>{t.home.footBeach}</h4>
+            <h4>{t.nav.tools}</h4>
             <ul>
-              <li><Link to="/beach">2×2</Link></li>
-              <li><Link to="/beach">{t.home.footSignals}</Link></li>
+              <li><Link to="/sandbox">{t.nav.sandbox}</Link></li>
+              <li><Link to="/compare">{t.nav.compare}</Link></li>
             </ul>
           </div>
         </div>
         <div className="footer__legal">
           <span>&copy; 2026 Vollearn</span>
-          <span>5-1 · 6-2 · 4-2 · 2×2</span>
+          <span>5-1 · 6-2 · 4-2</span>
         </div>
       </div>
     </footer>
@@ -168,21 +164,11 @@ function Footer() {
 }
 
 export default function App() {
-  const { t } = useT();
   const loc = useLocation();
   useEffect(() => { window.scrollTo(0, 0); }, [loc.pathname]);
-  // remember the last indoor page so "Indoor volleyball" returns exactly there
-  const isBeach = loc.pathname.startsWith('/beach');
-  const [lastIndoor, setLastIndoor] = useState('/');
-  useEffect(() => { if (!isBeach) setLastIndoor(loc.pathname); }, [isBeach, loc.pathname]);
   return (
     <>
-      <Header lastIndoor={lastIndoor} />
-      {isBeach ? (
-        <Link to={lastIndoor} className="beach-tab indoor-tab">{t.nav.indoorTab}</Link>
-      ) : (
-        <Link to="/beach" className="beach-tab">{t.beach.button}</Link>
-      )}
+      <Header />
       <main>
         <Routes location={loc}>
           <Route path="/" element={<Home />} />
@@ -193,7 +179,6 @@ export default function App() {
           <Route path="/compare" element={<Compare />} />
           <Route path="/sandbox" element={<Sandbox />} />
           <Route path="/quiz" element={<Quiz />} />
-          <Route path="/beach" element={<Beach />} />
           <Route path="*" element={<Home />} />
         </Routes>
       </main>

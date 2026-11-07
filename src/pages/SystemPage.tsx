@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as RPE } from 'react';
-import { Link } from 'react-router-dom';
 import { useReducedMotion } from 'framer-motion';
 import { fmt, useT } from '../i18n';
 import type { AttackKind, Formation, Phase, Placed, PlayerId, Pose, SetterMode, SystemId, Zone } from '../data/types';
@@ -461,7 +460,6 @@ export default function SystemPage({ sys }: { sys: SystemId }) {
               <button className="btn btn--ghost btn--small" onClick={() => (auto ? cancel() : busy ? null : play())} aria-label={t.ui.play}>
                 {auto ? '❚❚' : '▶'} {auto ? t.ui.pause : t.ui.play}
               </button>
-              <Link to="/beach" className="beach-pill">🏖 2×2</Link>
             </div>
           </div>
 
