@@ -1,4 +1,5 @@
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { useReducedMotion } from './motion';
 import type { Pose, RoleKind } from '../data/types';
 import { ROLE_BADGE } from '../data/roles';
 

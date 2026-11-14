@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { useReducedMotion } from 'framer-motion';
+import { useReducedMotion } from './motion';
 import { Ball2D } from './Ball2D';
 import type { BallDesign } from '../three/Ball3D';
 
@@ -23,7 +23,7 @@ export function BallStage({ design, label, size }: { design: BallDesign; label: 
   }, []);
   const fallback = (
     <div className="ball-fallback">
-      <svg viewBox="-1.2 -1.2 2.4 2.4" width="70%"><Ball2D r={1} design={design} /></svg>
+      <svg viewBox="-1.2 -1.2 2.4 2.4" width="70%"><Ball2D r={1} design={design} spinning period={6} /></svg>
     </div>
   );
   return (

@@ -1,10 +1,11 @@
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { useReducedMotion } from './motion';
 import { useId } from 'react';
 
 export type Ball2DDesign = 'molten';
 
 /** Shaded SVG ball (no logos): the white, green and red indoor ball. */
-export function Ball2D({ r = 0.22, spinning = false }: { r?: number; spinning?: boolean; design?: Ball2DDesign }) {
+export function Ball2D({ r = 0.22, spinning = false, period = 0.6 }: { r?: number; spinning?: boolean; period?: number; design?: Ball2DDesign }) {
   const id = useId().replace(/:/g, '');
   const reduce = useReducedMotion();
   const base = '#F4F3EE';
@@ -24,7 +25,7 @@ export function Ball2D({ r = 0.22, spinning = false }: { r?: number; spinning?: 
         <circle r={r} fill={base} />
         <motion.g
           animate={spinning && !reduce ? { rotate: 360 } : { rotate: 0 }}
-          transition={spinning ? { duration: 0.6, repeat: Infinity, ease: 'linear' } : { duration: 0 }}
+          transition={spinning ? { duration: period, repeat: Infinity, ease: 'linear' } : { duration: 0 }}
         >
           <g transform={`scale(${r})`} strokeLinecap="round">
             <path d="M -1.2 -0.55 C -0.5 -0.95 0.4 -0.9 1.2 -0.4 L 1.2 -0.08 C 0.4 -0.55 -0.5 -0.6 -1.2 -0.22 Z" fill="#0B8F4D" />

@@ -399,8 +399,11 @@ table.t tr:last-child td, table.t tr:last-child th { border-bottom: 0; }
   color: var(--ink); padding: 0 12px; font: inherit; font-size: 16px; width: 100%;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+/* motion stays on whatever the phone's "reduce motion" setting says (components/motion.ts) */
+/* touch screens have no hover: linked cards answer the tap instead */
+@media (hover: none) {
+  .h-card:active, .menu-col a:active, .footer__col a:active, .h-pill:active, .chip:active, .seg button:active, .h-rl button:active { transform: scale(0.98); }
+  .h-card, .menu-col a, .h-pill, .chip, .seg button, .h-rl button { transition: transform 160ms var(--ease-out), background-color 160ms ease, border-color 160ms ease, color 160ms ease; }
 }
 
 /* Chrome draws a broken focus ring on transformed SVG groups; the ring is drawn in SVG instead */

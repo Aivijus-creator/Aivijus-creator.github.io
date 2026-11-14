@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as RPE } from 'react';
-import { useReducedMotion } from 'framer-motion';
+import { useReducedMotion } from '../components/motion';
 import { fmt, useT } from '../i18n';
 import type { AttackKind, Formation, Phase, Placed, PlayerId, Pose, SetterMode, SystemId, Zone } from '../data/types';
 import { SYSTEMS } from '../data/systems';

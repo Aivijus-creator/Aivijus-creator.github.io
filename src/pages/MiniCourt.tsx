@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useReducedMotion } from 'framer-motion';
+import { useReducedMotion } from '../components/motion';
 import { useT } from '../i18n';
 import { Court, type CourtPlayer } from '../components/Court';
 import { SYSTEMS } from '../data/systems';

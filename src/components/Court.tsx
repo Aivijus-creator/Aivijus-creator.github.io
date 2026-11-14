@@ -1,4 +1,5 @@
-import { motion, useReducedMotion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useReducedMotion } from './motion';
 import { useRef, type ReactNode, type PointerEvent as RPE } from 'react';
 import type { PlayerId, Pose, RoleKind, Spot, Zone } from '../data/types';
 import { Figure } from './Figure';
